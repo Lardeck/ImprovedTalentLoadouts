@@ -1,0 +1,7 @@
+## Interface: 100002
+## Title: TalentLoadoutProfiles
+## Version: 1
+## SavedVariables: TalentLoadoutProfilesDB
+
+Libs\!LibUIDropDownMenu\!LibUIDropDownMenu.toc
+TalentLoadoutProfiles.lua
