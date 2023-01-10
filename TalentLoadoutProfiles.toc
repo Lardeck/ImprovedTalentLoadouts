@@ -3,5 +3,8 @@
 ## Version: 1
 ## SavedVariables: TalentLoadoutProfilesDB
 
-Libs\!LibUIDropDownMenu\!LibUIDropDownMenu.toc
+Libs\LibStub\LibStub.lua
+Libs\LibDeflate\LibDeflate.lua
+Libs\LibSerialize\lib.xml
+Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml
 TalentLoadoutProfiles.lua
