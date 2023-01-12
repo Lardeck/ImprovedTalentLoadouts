@@ -194,7 +194,7 @@ local function CreateEntryInfoFromString(exportString, treeID)
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = ClassTalentFrame.TalentsTab:ReadLoadoutHeader(importStream)
     local loadoutContent = ClassTalentFrame.TalentsTab:ReadLoadoutContent(importStream, treeID)
-    local success, loadoutEntryInfo = pcall(function() ClassTalentFrame.TalentsTab:ConvertToImportLoadoutEntryInfo(treeID, loadoutContent) end)
+    local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, treeID, loadoutContent)
 
     if success then
         return loadoutEntryInfo
