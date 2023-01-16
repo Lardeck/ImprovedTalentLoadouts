@@ -84,8 +84,6 @@ end
 
 function TalentLoadouts:Initialize()
     TalentLoadoutProfilesDB = TalentLoadoutProfilesDB or defaultDB
-    self:CheckForDBUpdates()
-
     if not TalentLoadoutProfilesDB.classesInitialized then
         local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
         for i, className in ipairs(classes) do
@@ -94,6 +92,7 @@ function TalentLoadouts:Initialize()
 
         TalentLoadoutProfilesDB.classesInitialized = true
     end
+    self:CheckForDBUpdates()
 end
 
 function TalentLoadouts:InitializeCharacterDB()
@@ -123,7 +122,7 @@ function TalentLoadouts:InitializeCharacterDB()
 end
 
 function TalentLoadouts:CheckForDBUpdates()
-    local currentVersion = TalentLoadoutProfilesDB.version
+    local currentVersion = TalentLoadoutProfilesDB.version or 0
     if currentVersion == 2 then
         currentVersion = 3
         TalentLoadoutProfilesDB = {
@@ -1075,6 +1074,10 @@ local function AddToCategory(self, categoryInfo)
     end
 end
 
+local function RemoveFromSpecificCategory(self, configID, categoryInfo)
+    tDeleteItem(categoryInfo.loadouts, configID)
+end
+
 local loadoutFunctions = {
     addToProfile = {
         name = "Add to Profile (NYI)",
@@ -1125,6 +1128,12 @@ local loadoutFunctions = {
         menuList = "addToCategory",
         notCheckable = true,
         hasArrow = true,
+    },
+    removeFromCategory = {
+        name = "Remove from this category",
+        func = RemoveFromSpecificCategory,
+        notCheckable = true,
+        level = 3,
     }
 }
 
@@ -1233,16 +1242,21 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             },
         level)
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "updateTree", "updateActionbars", "removeActionbars", "rename", "delete", "export"}
-        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE]
+        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateActionbars", "removeActionbars", "rename", "delete", "export"}
+        local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
+        if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
+            configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
+        end
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
 
         for _, func in ipairs(functions) do
             local info = loadoutFunctions[func]
-            if not info.required or configInfo[info.required] then
+            if (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
                 LibDD:UIDropDownMenu_AddButton(
                 {
-                    arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
-                    value = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg1 = configID,
+                    arg2 = categoryInfo,
+                    value = configID,
                     notCheckable = info.notCheckable and 1 or nil,
                     tooltipTitle = info.tooltipTitle,
                     tooltipOnButton = info.tooltipText and 1 or nil,
@@ -1279,12 +1293,15 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     LibDD:UIDropDownMenu_AddButton(
                         {
                             arg1 = configInfo,
-                            value = configID,
+                            value = {configID, categoryInfo},
                             colorCode = color,
                             text = configInfo.name,
                             minWidth = 170,
                             hasArrow = true,
-                            func = LoadLoadout,
+                            func = function(...)
+                                LoadLoadout(...)
+                                LibDD:CloseDropDownMenus()
+                            end,
                             checked = function()
                                 return TalentLoadouts.charDB.lastLoadout and TalentLoadouts.charDB.lastLoadout == configID
                             end,
