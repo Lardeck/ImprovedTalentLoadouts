@@ -37,6 +37,7 @@ do
                 TalentLoadouts:InitializeTalentLoadouts()
                 TalentLoadouts:InitializeDropdown()
                 TalentLoadouts:InitializeButtons()
+                TalentLoadouts:InitializeHooks()
             end
         elseif event == "PLAYER_ENTERING_WORLD" then
             TalentLoadouts:InitializeCharacterDB()
@@ -50,6 +51,7 @@ do
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
             TalentLoadouts:UpdateSpecID()
             TalentLoadouts:UpdateDropdownText()
+            TalentLoadouts:UpdateSpecButtons()
         end
     end)
 end
@@ -70,6 +72,8 @@ function TalentLoadouts:Initialize()
         TalentLoadoutProfilesDB.classesInitialized = true
     end
     self:CheckForDBUpdates()
+
+
 end
 
 function TalentLoadouts:InitializeCharacterDB()
@@ -185,8 +189,7 @@ function TalentLoadouts:InitializeTalentLoadouts()
             end
 
             if C_Traits.GetConfigInfo(configID) and (not configInfo.exportString or not configInfo.entryInfo or not configInfo.treeHash) then
-                local exportString, entryInfo, treeHash = CreateExportString(configInfo, configID, currentSpecID)
-                configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = exportString, entryInfo, treeHash
+                configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = CreateExportString(configInfo, configID, currentSpecID)
             end
         end
     else
@@ -195,6 +198,21 @@ function TalentLoadouts:InitializeTalentLoadouts()
     end
 
     self.loaded = true
+end
+
+function TalentLoadouts:InitializeTalentLoadout(newConfigID)
+    local specConfigIDs = self.globalDB.configIDs
+    local currentSpecID = self.specID
+    if specConfigIDs[currentSpecID] then
+        local configID = C_ClassTalents.GetActiveConfigID()
+        local configInfo = specConfigIDs[currentSpecID][newConfigID]
+        if C_Traits.GetConfigInfo(configID) and (not configInfo.exportString or not configInfo.entryInfo or not configInfo.treeHash) then
+            configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = CreateExportString(configInfo, configID, currentSpecID)
+        end
+    else
+        self:UpdateSpecID()
+        self:SaveCurrentLoadouts()
+    end
 end
 
 function TalentLoadouts:UpdateConfig(configID)
@@ -536,21 +554,23 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     self.globalDB.configIDs[currentSpecID][fakeConfigID].fake = true
     self.globalDB.configIDs[currentSpecID][fakeConfigID].name = loadoutName
     self.globalDB.configIDs[currentSpecID][fakeConfigID].ID = fakeConfigID
-    self:InitializeTalentLoadouts()
+    self:InitializeTalentLoadout(fakeConfigID)
 
     self.charDB.lastLoadout = fakeConfigID
     TalentLoadouts:UpdateDropdownText()
  end
 
  local function UpdateWithCurrentTree(self, configID)
-    local currentSpecID = TalentLoadouts.specID
-    local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
-    if configInfo then
-        local activeConfigID = C_ClassTalents.GetActiveConfigID()
-        local exportString, entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
-        
-        configInfo.exportString = exportString
-        configInfo.entryInfo = entryInfo
+    if configID then
+        local currentSpecID = TalentLoadouts.specID
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if configInfo then
+            local activeConfigID = C_ClassTalents.GetActiveConfigID()
+            local exportString, entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
+            
+            configInfo.exportString = exportString
+            configInfo.entryInfo = entryInfo
+        end
     end
  end
 
@@ -1032,7 +1052,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             level)
         end
     elseif menu == "addToCategory" then
-        for categoryKey, categoryInfo in pairs(TalentLoadouts.globalDB.categories[currentSpecID]) do
+        for _, categoryInfo in pairs(TalentLoadouts.globalDB.categories[currentSpecID]) do
             LibDD:UIDropDownMenu_AddButton(
                     {
                         arg1 = categoryInfo,
