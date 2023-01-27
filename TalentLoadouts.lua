@@ -1055,6 +1055,31 @@ function TalentLoadouts:UpdateDropdownText()
     LibDD:UIDropDownMenu_SetText(self.dropdown, dropdownText)
 end
 
+function TalentLoadouts:InitializeHooks()
+    ClassTalentFrame:HookScript("OnShow", function()
+        if ClassTalentFrame.inspectUnit then
+            local specID = GetInspectSpecialization(ClassTalentFrame.inspectUnit)
+            if not specID or specID ~= self.specID then
+                self.dropdown:Hide()
+                self.saveButton:Hide()
+            end
+
+            for _, specButton in ipairs(self.specButtons) do
+                specButton:Hide()
+            end
+            self.hidden = true
+        elseif self.hidden then
+            self.dropdown:Show()
+            self.saveButton:Show()
+            for _, specButton in ipairs(self.specButtons) do
+                specButton:Show()
+            end
+
+            self.hidden = nil
+        end
+    end)
+end
+
 function TalentLoadouts:InitializeDropdown()
     local dropdown = LibDD:Create_UIDropDownMenu("TestDropdownMenu", ClassTalentFrame.TalentsTab)
     self.dropdown = dropdown
@@ -1075,20 +1100,75 @@ function TalentLoadouts:InitializeButtons()
     saveButton:RegisterForClicks("LeftButtonDown")
     saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -10, 2)
     saveButton:SetText("Update")
+    --saveButton:Disable()
+    saveButton.enabled = false
 
-    saveButton:SetScript("OnEnter", function()
-        GameTooltip:SetOwner(saveButton, "CURSOR")
+    saveButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(saveButton, "ANCHOR_TOP")
         GameTooltip:AddLine("Update the active loadout with the current tree.")
+        GameTooltip:AddLine("The button will only work while you're holding down SHIFT")
         GameTooltip:Show()
     end)
     
-    saveButton:SetScript("OnLeave", function()
+    saveButton:SetScript("OnLeave", function(self)
         GameTooltip:Hide()
     end)
 
     saveButton:SetScript("OnClick", function()
-        UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout)
+        if IsShiftKeyDown() then
+            UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout)
+        end
     end)
+
+    self.specButtons = {}
+    local numSpecializations = GetNumSpecializations()
+    local width = 318 / numSpecializations
+    for specIndex=1, numSpecializations do
+        local specName = select(2, GetSpecializationInfo(specIndex))
+        local specButton = CreateFrame("Button", nil, self.dropdown, "UIPanelButtonNoTooltipTemplate, UIButtonTemplate")
+        self.specButtons[specIndex] = specButton
+        specButton.specIndex = specIndex
+        specButton:SetNormalAtlas("charactercreate-customize-dropdownbox")
+        specButton:SetScript("OnClick", function(self)
+            if self.specIndex ~= GetSpecialization() then
+                SetSpecialization(specIndex)
+            end
+        end)
+        specButton:RegisterForClicks("LeftButtonDown")
+
+        if #specName > ceil(width/10) then
+            specButton:SetText(specName:sub(1, ceil(width/11)) .. "...")
+        else
+            specButton:SetText(specName)
+        end
+
+        specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
+        specButton:SetSize(width, 30)
+        
+        specButton:SetScript("OnEnter", function()
+            GameTooltip:SetOwner(specButton, "ANCHOR_TOP")
+            GameTooltip:AddLine("Change your specialization to " .. specName)
+            GameTooltip:Show()
+        end)
+        
+        specButton:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        if specIndex == GetSpecialization() then
+            specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
+        end
+    end
+end
+
+function TalentLoadouts:UpdateSpecButtons()
+    for specIndex, specButton in ipairs(self.specButtons) do
+        if specIndex == GetSpecialization() then
+            specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
+        else
+            specButton:GetNormalTexture():SetVertexColor(1, 1, 1)
+        end
+    end
 end
 
 function TalentLoadouts:Print(...)
