@@ -851,9 +851,10 @@ local categoryFunctions = {
         notCheckable = true,
     },
     export = {
-        name = "Export (NYI)",
+        name = "Export Category",
         tooltipTitle = "Export",
         tooltipText = "Export all loadouts associated with this category at once.",
+        func = ExportCategory,
         notCheckable = true
     }
 }
