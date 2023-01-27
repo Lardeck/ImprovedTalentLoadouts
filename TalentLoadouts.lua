@@ -354,6 +354,96 @@ function TalentLoadouts:CreateCategory(categoryName)
     }
 end
 
+StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_IMPORT"] = {
+    text = "Category Import String",
+    button1 = "Import",
+    button2 = "Cancel",
+    OnAccept = function(self)
+       local importString = self.editBox:GetText()
+       TalentLoadouts:ImportCategory(importString)
+    end,
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+     end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+local function ImportCategory()
+    StaticPopup_Show("TALENTLOADOUTS_CATEGORY_IMPORT")
+end
+
+function TalentLoadouts:ImportCategory(importString)
+    local version, categoryString = importString:match("!PTL(%d+)!(.+)")
+    local decoded = LibDeflate:DecodeForPrint(categoryString)
+    if not decoded then return end
+    local decompressed = LibDeflate:DecompressDeflate(decoded)
+    if not decompressed then return end
+    local success, data = LibSerialize:Deserialize(decompressed)
+    if not success then return end
+    
+    local categories = self.globalDB.categories[self.specID]
+    if not categories then
+        self.globalDB.categories[self.specID] = {}
+        categories = self.globalDB.categories[self.specID]
+    end
+
+    if categories[data.key] then 
+        self:Print("A category with this key already exists. You will be able to rename the category in the next update")
+        return 
+    else
+        categories[data.key] = {
+            key = data.key,
+            name = data.name,
+            loadouts = {}
+        }
+
+        for _, configInfo in ipairs(data) do
+            local configID = TalentLoadouts:ImportLoadout(configInfo.exportString, configInfo.name, data.key)
+            tinsert(categories[data.key].loadouts, configID)
+        end
+    end
+end
+
+StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_EXPORT"] = {
+    text = "Export Category",
+    button1 = "Okay",
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+     end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+local function ExportCategory(self, categoryInfo)
+    if categoryInfo then
+        local export = {name = categoryInfo.name, key = categoryInfo.key}
+        local currentSpecID = TalentLoadouts.specID
+        for _, configID in ipairs(categoryInfo.loadouts) do
+            local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+            if configInfo then
+                tinsert(export, {name = configInfo.name, exportString = configInfo.exportString})
+            end
+        end
+
+        local serialized = LibSerialize:Serialize(export)
+        local compressed = LibDeflate:CompressDeflate(serialized)
+        local encode = LibDeflate:EncodeForPrint(compressed)
+        local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_EXPORT")
+        dialog.editBox:SetText("!PTL1!" .. encode)
+        dialog.editBox:HighlightText()
+        dialog.editBox:SetFocus()
+    end
+end
+
 StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
     text = "New Category Name for '%s'",
     button1 = "Rename",
@@ -577,7 +667,7 @@ local function ImportCustomLoadout()
     StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
 end
 
-function TalentLoadouts:ImportLoadout(importString, loadoutName)
+function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local currentSpecID = self.specID
     local fakeConfigID = #self.globalDB.configIDs[currentSpecID] + 1
     local treeID = ClassTalentFrame.TalentsTab:GetTreeInfo().ID
@@ -593,10 +683,13 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName)
             exportString = importString,
             entryInfo = entryInfo,
             usesSharedActionBars = true,
+            category = category
         }
     else
         self:Print("Invalid import string.")
     end
+
+    return fakeConfigID
 end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_EXPORT"] = {
@@ -828,6 +921,15 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 notCheckable = 1,
                 func = CreateCategory,
+            }
+        )
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Category",
+                minWidth = 170,
+                notCheckable = 1,
+                func = ImportCategory,
             }
         )
 
