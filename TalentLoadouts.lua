@@ -204,9 +204,9 @@ function TalentLoadouts:InitializeTalentLoadout(newConfigID)
     local specConfigIDs = self.globalDB.configIDs
     local currentSpecID = self.specID
     if specConfigIDs[currentSpecID] then
-        local configID = C_ClassTalents.GetActiveConfigID()
+        local configID = C_Traits.GetConfigInfo(newConfigID) and newConfigID or C_ClassTalents.GetActiveConfigID()
         local configInfo = specConfigIDs[currentSpecID][newConfigID]
-        if C_Traits.GetConfigInfo(configID) and (not configInfo.exportString or not configInfo.entryInfo or not configInfo.treeHash) then
+        if configInfo and (not configInfo.exportString or not configInfo.entryInfo or not configInfo.treeHash) then
             configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = CreateExportString(configInfo, configID, currentSpecID)
         end
     else
@@ -241,7 +241,7 @@ function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     local configInfo = C_Traits.GetConfigInfo(configID)
     if configInfo.type == 1 then
         specLoadouts[configID] = configInfo
-        self:InitializeTalentLoadouts()
+        self:InitializeTalentLoadout(configID)
     end
 end
 
@@ -760,10 +760,22 @@ function TalentLoadouts:UpdateActionBars(configInfo)
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local actionType, id, actionSubType = GetActionInfo(actionSlot)
         if actionType then
+            local key, macroType
+            if actionType == "macro" then
+                local name, _, body = GetMacroInfo(id)
+                if name and body then
+                    body = strtrim(body:gsub("\r", ""))
+                    key = string.format("%s\031%s", name, body)
+                    macroType = id > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
+                end
+            end
+
             actionBars[actionSlot] = {
                 type = actionType,
                 id = id,
-                subType = actionSubType
+                subType = actionSubType,
+                key = key,
+                macroType = macroType
             }
         end
     end
@@ -789,7 +801,14 @@ function TalentLoadouts:LoadActionBar(actionBars)
             if slotInfo.type == "spell" then
                 PickupSpell(slotInfo.id)
             elseif slotInfo.type == "macro" then
-                PickupMacro(slotInfo.id)
+                if slotInfo.macroType then
+                    local id = self[slotInfo.macroType][slotInfo.key]
+                    if id then
+                        PickupMacro(id)
+                    end
+                else
+                    PickupMacro(slotInfo.id)
+                end
             elseif slotInfo.type == "item" then
                 PickupItem(slotInfo.id)
             end
@@ -814,7 +833,7 @@ end
 
 local loadoutFunctions = {
     updateTree = {
-        name = "Save Tree",
+        name = "Update Tree",
         notCheckable = true,
         func = UpdateWithCurrentTree,
     },
@@ -1206,11 +1225,18 @@ function TalentLoadouts:UpdateMacros()
         local name, _, body = GetMacroInfo(macroSlot)
         if name then
             body = strtrim(body:gsub("\r", ""))
+            local key = string.format("%s\031%s", name, body)
             globalMacros[macroSlot] = {
                 slot = macroSlot,
                 body = body,
                 name = name,
+                key = key
             }
+
+            globalMacros[key] = macroSlot
+        elseif globalMacros[macroSlot] then
+            globalMacros[globalMacros[macroSlot].key] = nil
+            globalMacros[macroSlot] = nil
         end
     end
 
@@ -1218,11 +1244,18 @@ function TalentLoadouts:UpdateMacros()
         local name, _, body = GetMacroInfo(macroSlot)
         if name then
             body = strtrim(body:gsub("\r", ""))
+            local key = string.format("%s\031%s", name, body)
             charMacros[macroSlot] = {
                 slot = macroSlot,
                 body = body,
                 name = name,
+                key = key,
             }
+
+            charMacros[key] = macroSlot
+        elseif charMacros[macroSlot] then
+            charMacros[charMacros[macroSlot].key] = nil
+            charMacros[macroSlot] = nil
         end
     end
 end
