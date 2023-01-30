@@ -184,10 +184,6 @@ function TalentLoadouts:InitializeTalentLoadouts()
     local currentSpecID = self.specID
     if specConfigIDs[currentSpecID] then
         for configID, configInfo in pairs(specConfigIDs[currentSpecID]) do
-            if configInfo.fake then
-                configID = C_ClassTalents.GetActiveConfigID()
-            end
-
             if C_Traits.GetConfigInfo(configID) and (not configInfo.exportString or not configInfo.entryInfo or not configInfo.treeHash) then
                 configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = CreateExportString(configInfo, configID, currentSpecID)
             end
