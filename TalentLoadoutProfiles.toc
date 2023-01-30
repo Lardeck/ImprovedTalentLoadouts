@@ -2,9 +2,11 @@
 ## Title: PermoksTalentLoadouts
 ## Version: 1
 ## SavedVariables: TalentLoadoutProfilesDB
+## OptionalDeps: Simulationcraft
 
 Libs\LibStub\LibStub.lua
 Libs\LibDeflate\LibDeflate.lua
 Libs\LibSerialize\lib.xml
 Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml
+API.lua
 TalentLoadouts.lua

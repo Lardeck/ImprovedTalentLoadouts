@@ -939,6 +939,20 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Add Loadouts to /simc",
+                isNotRadio = true,
+                minWidth = 170,
+                func = function()
+                    TalentLoadoutProfilesDB.simc = not TalentLoadoutProfilesDB.simc
+                end,
+                checked = function()
+                    return TalentLoadoutProfilesDB.simc
+                end
+            }
+        )
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Create Loadout from current Tree",
                 minWidth = 170,
                 notCheckable = 1,
@@ -1118,6 +1132,41 @@ function TalentLoadouts:InitializeHooks()
             self.hidden = nil
         end
     end)
+
+    hooksecurefunc(SlashCmdList, "ACECONSOLE_SIMC", function()
+        if not TalentLoadoutProfilesDB.simc then return end
+
+        local customLoadouts
+        for _, v in PTLAPI.EnumerateSpecLoadouts() do
+           if not v.default then
+              if customLoadouts then
+                 customLoadouts = string.format("%s\n# Saved Loadout: %s\n# talents=%s", customLoadouts, v.name, v.exportString)
+              else
+                 customLoadouts = string.format("\n# Saved Loadout: %s\n# talents=%s", v.name, v.exportString)
+              end
+           end
+        end
+        
+        if customLoadouts and SimcEditBox then
+           local hooked = true
+           local text = SimcEditBox:GetText()
+           SimcEditBox:SetCursorPosition(SimcEditBox:GetNumLetters())
+           SimcEditBox:HighlightText(0,0)
+           SimcEditBox:Insert(customLoadouts)
+           SimcEditBox:HighlightText()
+           SimcEditBox:SetFocus()
+           SimcEditBox:HookScript("OnTextChanged", function(self) 
+                 if hooked then
+                    self:SetText(text .. customLoadouts)
+                    self:HighlightText()
+                 end
+           end)
+           
+           SimcEditBox:HookScript("OnHide", function(self)
+                 hooked = false
+           end)
+        end
+  end)
 end
 
 function TalentLoadouts:InitializeDropdown()
