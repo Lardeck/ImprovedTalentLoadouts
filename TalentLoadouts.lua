@@ -326,7 +326,6 @@ local function LoadLoadout(self, configInfo)
         end
     else
         TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
-        C_Traits.RollbackConfig(activeConfigID)
     end
 
     LibDD:CloseDropDownMenus()
