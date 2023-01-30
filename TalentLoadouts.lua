@@ -240,6 +240,7 @@ function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     local specLoadouts = self.globalDB.configIDs[currentSpecID]
     local configInfo = C_Traits.GetConfigInfo(configID)
     if configInfo.type == 1 then
+        configInfo.default = configID == C_ClassTalents.GetActiveConfigID() or nil
         specLoadouts[configID] = configInfo
         self:InitializeTalentLoadout(configID)
     end
