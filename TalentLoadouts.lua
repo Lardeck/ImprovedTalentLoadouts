@@ -88,6 +88,7 @@ function TalentLoadouts:InitializeCharacterDB()
         TalentLoadoutProfilesDB.actionbars.macros.char[playerName] = {}
     end
 
+    TalentLoadoutProfilesDB.actionbars.macros.global = TalentLoadoutProfilesDB.actionbars.macros.global or {}
     self.charDB = TalentLoadoutProfilesDB.loadouts.characterLoadouts[playerName]
     self.globalDB = TalentLoadoutProfilesDB.loadouts.globalLoadouts[UnitClassBase("player")]
     self.charMacros = TalentLoadoutProfilesDB.actionbars.macros.char[playerName]
