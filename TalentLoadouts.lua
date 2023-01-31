@@ -1130,6 +1130,7 @@ function TalentLoadouts:InitializeHooks()
         end
     end)
 
+    if not IsAddOnLoaded("Simulationcraft") then return end
     hooksecurefunc(SlashCmdList, "ACECONSOLE_SIMC", function()
         if not TalentLoadoutProfilesDB.simc then return end
 
