@@ -798,7 +798,7 @@ function TalentLoadouts:LoadActionBar(actionBars)
             if slotInfo.type == "spell" then
                 PickupSpell(slotInfo.id)
             elseif slotInfo.type == "macro" then
-                if slotInfo.macroType then
+                if slotInfo.macroType and self[slotInfo.macroType] then
                     local id = self[slotInfo.macroType][slotInfo.key]
                     if id then
                         PickupMacro(id)
