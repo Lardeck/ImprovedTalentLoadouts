@@ -72,8 +72,6 @@ function TalentLoadouts:Initialize()
         TalentLoadoutProfilesDB.classesInitialized = true
     end
     self:CheckForDBUpdates()
-
-
 end
 
 function TalentLoadouts:InitializeCharacterDB()
@@ -223,9 +221,8 @@ function TalentLoadouts:UpdateConfig(configID)
         return
     end
 
-    local oldConfigID = self.charDB.mapping[configID] or configID
     local currentSpecID = self.specID
-    local configInfo = self.globalDB.configIDs[currentSpecID][oldConfigID]
+    local configInfo = self.globalDB.configIDs[currentSpecID][configID]
     if configInfo then
         local newConfigInfo = C_Traits.GetConfigInfo(configID)
         configInfo.exportString, configInfo.entryInfo = CreateExportString(configInfo, configID, currentSpecID)
@@ -275,7 +272,7 @@ end
 
 local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
-    local configID = TalentLoadouts.charDB.mapping[configInfo.ID] or configInfo.ID
+    local configID = configInfo.ID
     if C_Traits.GetConfigInfo(configID) then
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
