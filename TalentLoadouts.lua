@@ -254,7 +254,6 @@ function TalentLoadouts:SaveCurrentLoadouts()
             local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
 
             for _, configID in ipairs(configIDs) do
-                configID = self.charDB.mapping[configID] or configID
                 specLoadouts[configID] = specLoadouts[configID] or C_Traits.GetConfigInfo(configID)
                 firstLoad = false
             end
