@@ -329,6 +329,16 @@ local function LoadLoadout(self, configInfo)
     LibDD:CloseDropDownMenus()
 end
 
+local function FindFreeConfigID()
+    local freeIndex = 1
+
+    for _ in ipairs(TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID]) do
+        freeIndex = freeIndex + 1
+    end
+
+    return freeIndex
+end
+
 StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_CREATE"] = {
     text = "Category Name",
     button1 = "Create",
@@ -545,12 +555,14 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
  function TalentLoadouts:SaveCurrentLoadout(loadoutName)
     local currentSpecID = self.specID
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
-    local fakeConfigID = #self.globalDB.configIDs[currentSpecID] + 1
+    local fakeConfigID = FindFreeConfigID()
+    if not fakeConfigID then return end
 
     self.globalDB.configIDs[currentSpecID][fakeConfigID] = C_Traits.GetConfigInfo(activeConfigID)
     self.globalDB.configIDs[currentSpecID][fakeConfigID].fake = true
     self.globalDB.configIDs[currentSpecID][fakeConfigID].name = loadoutName
     self.globalDB.configIDs[currentSpecID][fakeConfigID].ID = fakeConfigID
+    self.globalDB.configIDs[currentSpecID][fakeConfigID].categories = {}
     self:InitializeTalentLoadout(fakeConfigID)
 
     self.charDB.lastLoadout = fakeConfigID
@@ -686,7 +698,9 @@ end
 
 function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local currentSpecID = self.specID
-    local fakeConfigID = #self.globalDB.configIDs[currentSpecID] + 1
+    local fakeConfigID = FindFreeConfigID()
+    if not fakeConfigID then return end
+
     local treeID = ClassTalentFrame.TalentsTab:GetTreeInfo().ID
     local entryInfo = CreateEntryInfoFromString(importString, treeID)
 
