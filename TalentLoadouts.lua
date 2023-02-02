@@ -610,8 +610,10 @@ function TalentLoadouts:DeleteLoadout(configID)
         self.charDB.lastLoadout = nil
     end
 
-    if configInfo.category then
-        tDeleteItem(self.globalDB.categories[currentSpecID][configInfo.category].loadouts, configID)
+    if configInfo.categories then
+        for categoryKey in pairs(configInfo.categories) do
+            tDeleteItem(self.globalDB.categories[currentSpecID][categoryKey].loadouts, configID)
+        end
     end
 
     LibDD:CloseDropDownMenus()
