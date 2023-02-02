@@ -4,7 +4,7 @@ local talentUI = "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
-local internalVersion = 4
+local internalVersion = 5
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
 
 local defaultDB = {
