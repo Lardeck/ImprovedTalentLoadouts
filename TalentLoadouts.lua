@@ -125,23 +125,26 @@ function TalentLoadouts:CheckForDBUpdates()
             TalentLoadoutProfilesDB.loadouts.globalLoadouts[className].categories = TalentLoadoutProfilesDB.loadouts.globalLoadouts[className].categories or {}
         end
     end
+
+    if currentVersion < 5 then
+        for _, classTbl in pairs(TalentLoadoutProfilesDB.loadouts.globalLoadouts) do
+            for _, specTbl in pairs(classTbl.configIDs) do
+                for _, configInfo in pairs(specTbl) do
+                    if configInfo.category then
+                        configInfo.categories = configInfo.categories or {[configInfo.category] = true}
+                        configInfo.category = nil
+                    else
+                        configInfo.categories = configInfo.categories or {}
+                    end
+                end
+            end
+        end
+    end
 end
 
 
 function TalentLoadouts:CheckForVersionUpdates()
     local currentVersion = TalentLoadoutProfilesDB.version
-
-    if not currentVersion then
-        currentVersion = 1
-
-        self.charDB.specDefaults = {}
-
-        for specIndex=1, GetNumSpecializations() do
-            local specID = GetSpecializationInfo(specIndex)
-            self.charDB.specDefaults[specID] = {}
-        end
-    end
-
     TalentLoadoutProfilesDB.version = internalVersion
 end
 
@@ -700,7 +703,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
             exportString = importString,
             entryInfo = entryInfo,
             usesSharedActionBars = true,
-            category = category
+            categories = category and {[category] = true} or {},
         }
     else
         self:Print("Invalid import string.")
@@ -819,13 +822,19 @@ local function AddToCategory(self, categoryInfo)
     local configInfo = TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][L_UIDROPDOWNMENU_MENU_VALUE]
 
     if configInfo and categoryInfo then
-        configInfo.category = categoryInfo.key
+        configInfo.categories[categoryInfo.key] = true
         tInsertUnique(categoryInfo.loadouts, L_UIDROPDOWNMENU_MENU_VALUE)
+        LibDD:CloseDropDownMenus()
     end
 end
 
 local function RemoveFromSpecificCategory(self, configID, categoryInfo)
-    tDeleteItem(categoryInfo.loadouts, configID)
+    local configInfo = TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][configID]
+    if configInfo then
+        configInfo.categories[categoryInfo.key] = nil
+        tDeleteItem(categoryInfo.loadouts, configID)
+        LibDD:CloseDropDownMenus()
+    end
 end
 
 local loadoutFunctions = {
@@ -914,7 +923,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
         end
 
         for configID, configInfo  in pairs(TalentLoadouts.globalDB.configIDs[currentSpecID]) do
-            if not configInfo.default and not configInfo.category then
+            if not configInfo.default and not next(configInfo.categories) then
                 local color = configInfo.fake and "|cFF33ff96" or "|cFFFFD100"
                 LibDD:UIDropDownMenu_AddButton(
                     {
