@@ -1,7 +1,7 @@
 local addonName, TalentLoadouts = ...
 
-PTLAPI = {}
-function PTLAPI:EnumerateSpecLoadouts()
+TLMAPI = {}
+function TLMAPI:EnumerateSpecLoadouts()
    if not TalentLoadouts.initialized then return end
    
    local last
@@ -12,4 +12,12 @@ function PTLAPI:EnumerateSpecLoadouts()
             return k, v
         end
    end
+end
+
+function TLMAPI:GetCurrentLoadout()
+    local configID = TalentLoadouts.charDB.lastLoadout
+    if configID then
+        local configInfo = TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][configID]
+        return configInfo
+    end
 end
