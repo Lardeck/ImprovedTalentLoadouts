@@ -64,35 +64,35 @@ end
 function TalentLoadouts:Initialize()
     -- Will be removed in a future version. Necessary because of a rename of the AddOn
     TalentLoadoutProfilesDB = TalentLoadoutProfilesDB or defaultDB
-    TalentLoadoutManagerDB = TalentLoadoutManagerDB or TalentLoadoutProfilesDB
-    if not TalentLoadoutManagerDB.classesInitialized then
+    ImprovedTalentLoadoutsDB = ImprovedTalentLoadoutsDB or TalentLoadoutProfilesDB
+    if not ImprovedTalentLoadoutsDB.classesInitialized then
         local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
         for i, className in ipairs(classes) do
-            TalentLoadoutManagerDB.loadouts.globalLoadouts[className] = {configIDs = {}, categories = {}}
+            ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className] = {configIDs = {}, categories = {}}
         end
 
-        TalentLoadoutManagerDB.classesInitialized = true
+        ImprovedTalentLoadoutsDB.classesInitialized = true
     end
     self:CheckForDBUpdates()
 end
 
 function TalentLoadouts:InitializeCharacterDB()
     local playerName = GetPlayerName()
-    if not TalentLoadoutManagerDB.loadouts.characterLoadouts[playerName] then
-        TalentLoadoutManagerDB.loadouts.characterLoadouts[playerName] = {
+    if not ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName] then
+        ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName] = {
             firstLoad = true
         }
     end
 
-    if not TalentLoadoutManagerDB.actionbars.macros.char[playerName] then
-        TalentLoadoutManagerDB.actionbars.macros.char[playerName] = {}
+    if not ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName] then
+        ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName] = {}
     end
 
-    TalentLoadoutManagerDB.actionbars.macros.global = TalentLoadoutManagerDB.actionbars.macros.global or {}
-    self.charDB = TalentLoadoutManagerDB.loadouts.characterLoadouts[playerName]
-    self.globalDB = TalentLoadoutManagerDB.loadouts.globalLoadouts[UnitClassBase("player")]
-    self.charMacros = TalentLoadoutManagerDB.actionbars.macros.char[playerName]
-    self.globalMacros = TalentLoadoutManagerDB.actionbars.macros.global
+    ImprovedTalentLoadoutsDB.actionbars.macros.global = ImprovedTalentLoadoutsDB.actionbars.macros.global or {}
+    self.charDB = ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName]
+    self.globalDB = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[UnitClassBase("player")]
+    self.charMacros = ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName]
+    self.globalMacros = ImprovedTalentLoadoutsDB.actionbars.macros.global
     self.specID = PlayerUtil.GetCurrentSpecID()
     self:CheckForVersionUpdates()
     self.initialized = true
@@ -100,13 +100,13 @@ function TalentLoadouts:InitializeCharacterDB()
 end
 
 function TalentLoadouts:CheckForDBUpdates()
-    local currentVersion = TalentLoadoutManagerDB.version or 0
+    local currentVersion = ImprovedTalentLoadoutsDB.version or 0
     if currentVersion == 2 then
         currentVersion = 3
-        TalentLoadoutManagerDB = {
+        ImprovedTalentLoadoutsDB = {
             loadouts = {
-                characterLoadouts = TalentLoadoutManagerDB.characterLoadouts or {},
-                globalLoadouts = TalentLoadoutManagerDB.globalLoadouts or {}
+                characterLoadouts = ImprovedTalentLoadoutsDB.characterLoadouts or {},
+                globalLoadouts = ImprovedTalentLoadoutsDB.globalLoadouts or {}
             },
             actionbars = {
                 macros = {
@@ -115,19 +115,19 @@ function TalentLoadouts:CheckForDBUpdates()
                 }
             },
             version = currentVersion,
-            classesInitialized = TalentLoadoutManagerDB.classesInitialized
+            classesInitialized = ImprovedTalentLoadoutsDB.classesInitialized
         }
     end
 
     if currentVersion <= 4 then
         local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
         for i, className in ipairs(classes) do
-            TalentLoadoutManagerDB.loadouts.globalLoadouts[className].categories = TalentLoadoutManagerDB.loadouts.globalLoadouts[className].categories or {}
+            ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className].categories = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className].categories or {}
         end
     end
 
     if currentVersion < 5 then
-        for _, classTbl in pairs(TalentLoadoutManagerDB.loadouts.globalLoadouts) do
+        for _, classTbl in pairs(ImprovedTalentLoadoutsDB.loadouts.globalLoadouts) do
             for _, specTbl in pairs(classTbl.configIDs) do
                 for _, configInfo in pairs(specTbl) do
                     if configInfo.category then
@@ -144,8 +144,8 @@ end
 
 
 function TalentLoadouts:CheckForVersionUpdates()
-    local currentVersion = TalentLoadoutManagerDB.version
-    TalentLoadoutManagerDB.version = internalVersion
+    local currentVersion = ImprovedTalentLoadoutsDB.version
+    ImprovedTalentLoadoutsDB.version = internalVersion
 end
 
 function TalentLoadouts:UpdateSpecID(isRespec)
@@ -968,10 +968,10 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 isNotRadio = true,
                 minWidth = 170,
                 func = function()
-                    TalentLoadoutManagerDB.simc = not TalentLoadoutManagerDB.simc
+                    ImprovedTalentLoadoutsDB.simc = not ImprovedTalentLoadoutsDB.simc
                 end,
                 checked = function()
-                    return TalentLoadoutManagerDB.simc
+                    return ImprovedTalentLoadoutsDB.simc
                 end
             }
         )
@@ -1160,10 +1160,10 @@ function TalentLoadouts:InitializeHooks()
 
     if not IsAddOnLoaded("Simulationcraft") then return end
     hooksecurefunc(SlashCmdList, "ACECONSOLE_SIMC", function()
-        if not TalentLoadoutManagerDB.simc then return end
+        if not ImprovedTalentLoadoutsDB.simc then return end
 
         local customLoadouts
-        for _, v in PTLAPI.EnumerateSpecLoadouts() do
+        for _, v in ITLAPI.EnumerateSpecLoadouts() do
            if not v.default then
               if customLoadouts then
                  customLoadouts = string.format("%s\n# Saved Loadout: %s\n# talents=%s", customLoadouts, v.name, v.exportString)

@@ -1,7 +1,7 @@
 ## Interface: 100005
-## Title: TalentLoadoutManager
+## Title: ImprovedTalentLoadouts
 ## Version: 1
-## SavedVariables: TalentLoadoutProfilesDB, TalentLoadoutManagerDB
+## SavedVariables: TalentLoadoutProfilesDB, ImprovedTalentLoadoutsDB
 ## OptionalDeps: Simulationcraft
 
 Libs\LibStub\LibStub.lua
@@ -9,4 +9,4 @@ Libs\LibDeflate\LibDeflate.lua
 Libs\LibSerialize\lib.xml
 Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml
 API.lua
-TalentLoadoutManager.lua
+ImprovedTalentLoadouts.lua
