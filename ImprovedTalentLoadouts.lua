@@ -812,6 +812,14 @@ function TalentLoadouts:UpdateActionBars(configInfo)
     configInfo.actionBars = compressed
 end
 
+local function LoadActionBar(self, configID)
+    local currentSpecID = TalentLoadouts.specID
+    local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+    if configInfo and configInfo.actionBars then
+        TalentLoadouts:LoadActionBar(configInfo.actionBars)
+    end
+end
+
 function TalentLoadouts:LoadActionBar(actionBars)
     if not actionBars then return end
 
@@ -872,15 +880,21 @@ local loadoutFunctions = {
         func = UpdateWithCurrentTree,
     },
     updateActionbars = {
-        name = "Save Action Bars",
+        name = "Save Actionbars",
         notCheckable = true,
         func = UpdateActionBars,
     },
     removeActionbars = {
-        name = "Remove Action Bars",
+        name = "Remove Actionbars",
         notCheckable = true,
         func = RemoveActionBars,
         required = "actionBars"
+    },
+    loadActionbars = {
+        name = "Load Actionbars",
+        notCheckable = true,
+        func = LoadActionBar,
+        required = "actionBars",
     },
     delete = {
         name = "Delete",
