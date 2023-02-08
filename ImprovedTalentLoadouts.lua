@@ -964,6 +964,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                         text = categoryInfo.name,
                         hasArrow = true,
                         minWidth = 170,
+                        fontObject = dropdownFont,
                         notCheckable = 1,
                         menuList = "category"
                     },
@@ -981,6 +982,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                         text = configInfo.name,
                         hasArrow = true,
                         minWidth = 170,
+                        fontObject = dropdownFont,
                         func = LoadLoadout,
                         checked = function()
                             return TalentLoadouts.charDB.lastLoadout and TalentLoadouts.charDB.lastLoadout == configID
@@ -993,15 +995,12 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Add Loadouts to /simc",
-                isNotRadio = true,
+                text = "Options",
+                notCheckable = 1,
+                hasArrow = true,
+                fontObject = dropdownFont,
                 minWidth = 170,
-                func = function()
-                    ImprovedTalentLoadoutsDB.simc = not ImprovedTalentLoadoutsDB.simc
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.simc
-                end
+                menuList = "options"
             }
         )
 
@@ -1009,6 +1008,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             {
                 text = "Create Loadout from current Tree",
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 func = SaveCurrentLoadout,
             },
@@ -1018,6 +1018,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             {
                 text = "Import Loadout",
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
             },
@@ -1027,6 +1028,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             {
                 text = "Create Category",
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 func = CreateCategory,
             }
@@ -1036,6 +1038,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             {
                 text = "Import Category",
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCategory,
             }
@@ -1045,12 +1048,72 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             {
                 text = "Close",
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 func = LibDD.CloseDropDownMenus,
             },
         level)
+    elseif menu == "options" then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Automatically apply Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.applyLoadout = not ImprovedTalentLoadoutsDB.applyLoadout
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.applyLoadout
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Add Loadouts to /simc",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.simc = not ImprovedTalentLoadoutsDB.simc
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.simc
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Font Size",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                menuList = "fontSize"
+            },
+        level)
+    elseif menu == "fontSize" then
+        local fontSizes = {10, 11, 12, 13, 14, 15, 16, 18, 20}
+        for _, fontSize in ipairs(fontSizes) do
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    text = fontSize,
+                    fontObject = dropdownFont,
+                    func = function()
+                        ImprovedTalentLoadoutsDB.fontSize = fontSize
+                        TalentLoadouts:UpdateDropdownFont()
+                        LibDD.CloseDropDownMenus()
+                    end,
+                    checked = function()
+                        return ImprovedTalentLoadoutsDB.fontSize == fontSize
+                    end
+                },
+            level)
+        end
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateActionbars", "removeActionbars", "rename", "delete", "export"}
+        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
         local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
         if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
             configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
@@ -1071,6 +1134,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     tooltipText = info.tooltipText,
                     text = info.name,
                     isNotRadio = true,
+                    fontObject = dropdownFont,
                     func = info.func,
                     checked = info.checked,
                     hasArrow = info.hasArrow,
@@ -1094,6 +1158,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                             colorCode = color,
                             text = configInfo.name,
                             minWidth = 170,
+                            fontObject = dropdownFont,
                             hasArrow = true,
                             func = function(...)
                                 LoadLoadout(...)
@@ -1115,6 +1180,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 text = "Category Options",
                 hasArrow = true,
                 minWidth = 170,
+                fontObject = dropdownFont,
                 notCheckable = 1,
                 menuList = "categoryOptions"
             },
@@ -1132,6 +1198,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 tooltipText = info.tooltipText,
                 text = info.name,
                 isNotRadio = true,
+                fontObject = dropdownFont,
                 func = info.func,
                 checked = info.checked,
                 minWidth = 150,
@@ -1146,6 +1213,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                         colorCode = "|cFFab96b3",
                         text = categoryInfo.name,
                         minWidth = 170,
+                        fontObject = dropdownFont,
                         notCheckable = 1,
                         func = AddToCategory,
                     },
@@ -1161,6 +1229,10 @@ function TalentLoadouts:UpdateDropdownText()
     local configInfo = self.charDB.lastLoadout and self.globalDB.configIDs[currentSpecID][self.charDB.lastLoadout]
     dropdownText = configInfo and configInfo.name or "Unknown"
     LibDD:UIDropDownMenu_SetText(self.dropdown, dropdownText)
+end
+
+function TalentLoadouts:UpdateDropdownFont()
+    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.fontSize or 10, "")
 end
 
 function TalentLoadouts:InitializeHooks()
