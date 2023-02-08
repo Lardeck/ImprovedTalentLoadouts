@@ -83,17 +83,20 @@ end
 
 function TalentLoadouts:Initialize()
     -- Will be removed in a future version. Necessary because of a rename of the AddOn
-    TalentLoadoutProfilesDB = TalentLoadoutProfilesDB or defaultDB
-    ImprovedTalentLoadoutsDB = ImprovedTalentLoadoutsDB or TalentLoadoutProfilesDB
+    ImprovedTalentLoadoutsDB = ImprovedTalentLoadoutsDB or TalentLoadoutProfilesDB or defaultDB
     if not ImprovedTalentLoadoutsDB.classesInitialized then
-        local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
-        for i, className in ipairs(classes) do
-            ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className] = {configIDs = {}, categories = {}}
-        end
-
+        self:InitializeClassDBs()
         ImprovedTalentLoadoutsDB.classesInitialized = true
     end
     self:CheckForDBUpdates()
+    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.fontSize, "")
+end
+
+function TalentLoadouts:InitializeClassDBs()
+    local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
+    for i, className in ipairs(classes) do
+        ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className] = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className] or {configIDs = {}, categories = {}}
+    end
 end
 
 function TalentLoadouts:InitializeCharacterDB()
@@ -120,46 +123,11 @@ function TalentLoadouts:InitializeCharacterDB()
 end
 
 function TalentLoadouts:CheckForDBUpdates()
-    local currentVersion = ImprovedTalentLoadoutsDB.version or 0
-    if currentVersion == 2 then
-        currentVersion = 3
-        ImprovedTalentLoadoutsDB = {
-            loadouts = {
-                characterLoadouts = ImprovedTalentLoadoutsDB.characterLoadouts or {},
-                globalLoadouts = ImprovedTalentLoadoutsDB.globalLoadouts or {}
-            },
-            actionbars = {
-                macros = {
-                    global = {},
-                    char = {},
-                }
-            },
-            version = currentVersion,
-            classesInitialized = ImprovedTalentLoadoutsDB.classesInitialized
-        }
+    if ImprovedTalentLoadoutsDB.applyLoadout == nil then
+        ImprovedTalentLoadoutsDB.applyLoadout = true
     end
 
-    if currentVersion <= 4 then
-        local classes = {"HUNTER", "WARLOCK", "PRIEST", "PALADIN", "MAGE", "ROGUE", "DRUID", "SHAMAN", "WARRIOR", "DEATHKNIGHT", "MONK", "DEMONHUNTER", "EVOKER"}
-        for i, className in ipairs(classes) do
-            ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className].categories = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[className].categories or {}
-        end
-    end
-
-    if currentVersion < 5 then
-        for _, classTbl in pairs(ImprovedTalentLoadoutsDB.loadouts.globalLoadouts) do
-            for _, specTbl in pairs(classTbl.configIDs) do
-                for _, configInfo in pairs(specTbl) do
-                    if configInfo.category then
-                        configInfo.categories = configInfo.categories or {[configInfo.category] = true}
-                        configInfo.category = nil
-                    else
-                        configInfo.categories = configInfo.categories or {}
-                    end
-                end
-            end
-        end
-    end
+    ImprovedTalentLoadoutsDB.fontSize = ImprovedTalentLoadoutsDB.fontSize or 10
 end
 
 
@@ -170,6 +138,7 @@ end
 
 function TalentLoadouts:UpdateSpecID(isRespec)
     self.specID = PlayerUtil.GetCurrentSpecID()
+    self.treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
 
     if isRespec then
         self.charDB.lastLoadout = nil
