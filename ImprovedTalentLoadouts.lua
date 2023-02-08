@@ -4,8 +4,14 @@ local talentUI = "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
-local internalVersion = 5
+local internalVersion = 6
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
+
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
+local dataObjText = "ITL: %s, %s"
+local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL: Spec, Loadout"})
+
+local dropdownFont = CreateFont("ITL_DropdownFont")
 
 local defaultDB = {
     loadouts = {
@@ -20,14 +26,23 @@ local defaultDB = {
     }
 }
 
+local RegisterEvent, UnregisterEvent
 do
     local eventFrame = CreateFrame("Frame")
-    eventFrame:RegisterEvent("ADDON_LOADED")
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    eventFrame:RegisterEvent("TRAIT_CONFIG_UPDATED")
-    eventFrame:RegisterEvent("TRAIT_CONFIG_CREATED")
-    eventFrame:RegisterEvent("UPDATE_MACROS")
-    eventFrame:RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
+    function RegisterEvent(event)
+        eventFrame:RegisterEvent(event)
+    end
+
+    function UnregisterEvent(event)
+        eventFrame:UnregisterEvent(event)
+    end
+
+    RegisterEvent("ADDON_LOADED")
+    RegisterEvent("PLAYER_ENTERING_WORLD")
+    RegisterEvent("TRAIT_CONFIG_UPDATED")
+    RegisterEvent("TRAIT_CONFIG_CREATED")
+    RegisterEvent("UPDATE_MACROS")
+    RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     eventFrame:SetScript("OnEvent", function(self, event, arg1)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
@@ -35,6 +50,7 @@ do
             elseif arg1 == talentUI then
                 self:UnregisterEvent("ADDON_LOADED")
                 TalentLoadouts:InitializeTalentLoadouts()
+                TalentLoadouts:UpdateSpecID()
                 TalentLoadouts:InitializeDropdown()
                 TalentLoadouts:InitializeButtons()
                 TalentLoadouts:InitializeHooks()
@@ -42,8 +58,10 @@ do
         elseif event == "PLAYER_ENTERING_WORLD" then
             TalentLoadouts:InitializeCharacterDB()
             TalentLoadouts:SaveCurrentLoadouts()
+            TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
         elseif event == "TRAIT_CONFIG_UPDATED" then
             TalentLoadouts:UpdateConfig(arg1)
+            TalentLoadouts.pendingLoadout = nil
         elseif event == "TRAIT_CONFIG_CREATED" then
             TalentLoadouts:UpdateConfig(arg1.ID)
         elseif event == "UPDATE_MACROS" then
@@ -52,6 +70,8 @@ do
             TalentLoadouts:UpdateSpecID(true)
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
+            TalentLoadouts:UpdateDataObj()
+        elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" then
         end
     end)
 end
@@ -275,6 +295,11 @@ function TalentLoadouts:SaveCurrentLoadouts()
     end
 end
 
+function TalentLoadouts:UpdateDataObj(configInfo)
+    local _, name = GetSpecializationInfoByID(TalentLoadouts.specID)
+    dataObj.text = dataObjText:format(name, configInfo and configInfo.name or "Unknown")
+end
+
 local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
@@ -283,6 +308,7 @@ local function LoadLoadout(self, configInfo)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
         TalentLoadouts:UpdateDropdownText()
+        TalentLoadouts:UpdateDataObj(configInfo)
 
         if configInfo.actionBars then
             TalentLoadouts:LoadActionBar(configInfo.actionBars)
@@ -572,6 +598,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 
     self.charDB.lastLoadout = fakeConfigID
     TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj(self.globalDB.configIDs[currentSpecID][fakeConfigID])
  end
 
  local function UpdateWithCurrentTree(self, configID)
@@ -623,6 +650,7 @@ function TalentLoadouts:DeleteLoadout(configID)
 
     LibDD:CloseDropDownMenus()
     self:UpdateDropdownText()
+    self:UpdateDataObj()
 end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_RENAME"] = {
@@ -658,6 +686,7 @@ function TalentLoadouts:RenameLoadout(configID, newLoadoutName)
 
     LibDD:CloseDropDownMenus()
     self:UpdateDropdownText()
+    self:UpdateDataObj(configInfo)
 end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
