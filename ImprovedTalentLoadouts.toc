@@ -3,10 +3,13 @@
 ## Version: 1
 ## SavedVariables: TalentLoadoutProfilesDB, ImprovedTalentLoadoutsDB
 ## OptionalDeps: Simulationcraft
+## X-Curse-Project-ID: 822393
 
 Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 Libs\LibDeflate\LibDeflate.lua
 Libs\LibSerialize\lib.xml
 Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml
+Libs\libdatabroker-1-1\LibDataBroker-1.1.lua
 API.lua
 ImprovedTalentLoadouts.lua
