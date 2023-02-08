@@ -341,20 +341,31 @@ local function LoadLoadout(self, configInfo)
         end
     end
 
-    local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
-    if canChange then
-        C_ClassTalents.SaveConfig(configInfo.ID)
-        C_ClassTalents.CommitConfig(configInfo.ID)
-        TalentLoadouts.charDB.lastLoadout = configInfo.ID
-        TalentLoadouts:UpdateDropdownText()
-        C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
-        ClassTalentFrame.TalentsTab.LoadoutDropDown:ClearSelection()
+    if ImprovedTalentLoadoutsDB.applyLoadout then
+        local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
+        if canChange then
+            TalentLoadouts.pendingLoadout = nil
+            C_ClassTalents.SaveConfig(configInfo.ID)
+            C_ClassTalents.CommitConfig(configInfo.ID)
+            TalentLoadouts.charDB.lastLoadout = configInfo.ID
+            TalentLoadouts:UpdateDropdownText()
+            TalentLoadouts:UpdateDataObj(configInfo)
+            C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
+            ClassTalentFrame.TalentsTab.LoadoutDropDown:ClearSelection()
 
-        if configInfo.actionBars then
-            TalentLoadouts:LoadActionBar(configInfo.actionBars)
+            if configInfo.actionBars then
+                TalentLoadouts:LoadActionBar(configInfo.actionBars)
+            end
+        else
+            TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
         end
     else
-        TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
+        TalentLoadouts.currentLoadout = TalentLoadouts.charDB.lastLoadout
+        TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts:UpdateDropdownText()
+        TalentLoadouts:UpdateDataObj(configInfo)
+        TalentLoadouts.pendingLoadout = configInfo
+        --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     end
 
     LibDD:CloseDropDownMenus()
@@ -1256,6 +1267,15 @@ function TalentLoadouts:InitializeHooks()
             end
 
             self.hidden = nil
+        end
+    end)
+
+    hooksecurefunc(C_Traits, "RollbackConfig", function()
+        if TalentLoadouts.currentLoadout then
+            TalentLoadouts.pendingLoadout = nil
+            TalentLoadouts.charDB.lastLoadout = TalentLoadouts.currentLoadout
+            TalentLoadouts.currentLoadout = nil
+            TalentLoadouts:UpdateDropdownText()
         end
     end)
 
