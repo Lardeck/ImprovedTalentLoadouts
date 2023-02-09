@@ -82,7 +82,6 @@ local function GetPlayerName()
 end
 
 function TalentLoadouts:Initialize()
-    -- Will be removed in a future version. Necessary because of a rename of the AddOn
     ImprovedTalentLoadoutsDB = ImprovedTalentLoadoutsDB or TalentLoadoutProfilesDB or defaultDB
     if not ImprovedTalentLoadoutsDB.classesInitialized then
         self:InitializeClassDBs()
@@ -120,6 +119,24 @@ function TalentLoadouts:InitializeCharacterDB()
     self:CheckForVersionUpdates()
     self.initialized = true
     self:UpdateMacros()
+end
+
+-- Not sure how that can happen but apparently it was a problem for someone
+function TalentLoadouts:CheckDBIntegrity()
+    ImprovedTalentLoadoutsDB.loadouts = ImprovedTalentLoadoutsDB.loadouts or {globalLoadouts = {}, characterLoadouts = {}}
+    ImprovedTalentLoadoutsDB.loadouts.globalLoadouts = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts or {}
+    ImprovedTalentLoadoutsDB.loadouts.characterLoadouts = ImprovedTalentLoadoutsDB.loadouts.characterLoadouts or {}
+
+    if not self.globalDB then
+        ImprovedTalentLoadoutsDB.classesInitialized = nil
+        self:Initialize()
+        self.globalDB = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[UnitClassBase("player")]
+    end
+
+    if not self.charDB then
+        local playerName = GetPlayerName()
+        self.charDB = ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName]
+    end
 end
 
 function TalentLoadouts:CheckForDBUpdates()
@@ -176,6 +193,10 @@ local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
 end
 
 function TalentLoadouts:InitializeTalentLoadouts()
+    if not self.globalDB or not self.charDB then
+        self:CheckDBIntegrity()
+    end
+
     local specConfigIDs = self.globalDB.configIDs
     local currentSpecID = self.specID
     if specConfigIDs[currentSpecID] then
@@ -239,6 +260,10 @@ function TalentLoadouts:SaveLoadout(configID, currentSpecID)
 end
 
 function TalentLoadouts:SaveCurrentLoadouts()
+    if not self.globalDB or not self.charDB then
+        self:CheckDBIntegrity()
+    end
+
     local firstLoad = self.charDB.firstLoad
     if self.charDB.firstLoad then
         for specIndex=1, GetNumSpecializations() do
