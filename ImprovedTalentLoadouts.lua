@@ -144,6 +144,10 @@ function TalentLoadouts:CheckForDBUpdates()
         ImprovedTalentLoadoutsDB.applyLoadout = true
     end
 
+    if ImprovedTalentLoadoutsDB.showSpecButtons == nil then
+        ImprovedTalentLoadoutsDB.showSpecButtons = true
+    end
+
     ImprovedTalentLoadoutsDB.fontSize = ImprovedTalentLoadoutsDB.fontSize or 10
 end
 
@@ -1105,6 +1109,22 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Show Spec Buttons",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.showSpecButtons = not ImprovedTalentLoadoutsDB.showSpecButtons
+                    TalentLoadouts:UpdateSpecButtons()
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.showSpecButtons
+                end 
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Font Size",
                 notCheckable = 1,
                 minWidth = 170,
@@ -1406,7 +1426,15 @@ function TalentLoadouts:InitializeButtons()
 end
 
 function TalentLoadouts:UpdateSpecButtons()
+    if not ImprovedTalentLoadoutsDB.showSpecButtons then
+        for specIndex, specButton in ipairs(self.specButtons) do
+            specButton:Hide()
+        end
+        return
+    end
+
     for specIndex, specButton in ipairs(self.specButtons) do
+        specButton:Show()
         if specIndex == GetSpecialization() then
             specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
         else
