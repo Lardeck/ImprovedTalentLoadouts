@@ -679,6 +679,54 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     end
  end
 
+ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
+    text = "Loadout Import String",
+    button1 = "Import",
+    button2 = "Cancel",
+    OnAccept = function(self, configID)
+       local importString = self.editBox:GetText()
+       TalentLoadouts:UpdateWithString(configID, importString)
+    end,
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+     end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+ local function UpdateWithString(self, configID)
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE")
+    dialog.data = configID
+ end
+
+ function TalentLoadouts:UpdateWithString(configID, importString)
+    if configID then
+        local currentSpecID = TalentLoadouts.specID
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if configInfo then
+            local treeID = ClassTalentFrame.TalentsTab:GetTreeInfo().ID
+            local entryInfo = CreateEntryInfoFromString(importString, treeID)
+        
+            if entryInfo then
+                if configID == self.charDB.lastLoadout then
+                    self.charDB.lastLoadout = nil
+                    self:UpdateDropdownText()
+                    self:UpdateDataObj()
+                end
+
+                configInfo.entryInfo = entryInfo
+                configInfo.exportString = importString
+            else
+                self:Print("Invalid import string.")
+            end
+        end
+    end
+ end
+
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_DELETE"] = {
     text = "Are you sure you want to delete the loadout?",
     button1 = "Delete",
@@ -963,6 +1011,11 @@ local loadoutFunctions = {
         notCheckable = true,
         func = UpdateWithCurrentTree,
     },
+    updateWithString = {
+        name = "Update with String",
+        notCheckable = true,
+        func = UpdateWithString,
+    },
     updateActionbars = {
         name = "Save Actionbars",
         notCheckable = true,
@@ -1207,7 +1260,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             level)
         end
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
+        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
         local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
         if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
             configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
