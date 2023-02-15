@@ -121,7 +121,7 @@ function TalentLoadouts:InitializeCharacterDB()
     self:UpdateMacros()
 end
 
--- Not sure how that can happen but apparently it was a problem for someone
+-- Not sure how that can happen but apparently it was a problem for someone. Maybe there is another AddOn that overwrites my db?
 function TalentLoadouts:CheckDBIntegrity()
     ImprovedTalentLoadoutsDB.loadouts = ImprovedTalentLoadoutsDB.loadouts or {globalLoadouts = {}, characterLoadouts = {}}
     ImprovedTalentLoadoutsDB.loadouts.globalLoadouts = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts or {}
@@ -178,7 +178,7 @@ local function CreateEntryInfoFromString(exportString, treeID)
 end
 
 local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
-    local treeID = configInfo.treeIDs[1] or ClassTalentFrame.TalentsTab:GetTreeInfo().ID
+    local treeID = (configInfo and configInfo.treeIDs[1]) or ClassTalentFrame.TalentsTab:GetTreeInfo().ID
     local treeHash = C_Traits.GetTreeHash(treeID);
     local serializationVersion = C_Traits.GetLoadoutSerializationVersion()
     local dataStream = ExportUtil.MakeExportDataStream()
@@ -263,6 +263,10 @@ function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     end
 end
 
+function TalentLoadouts:GetExportStringForTree(skipEntryInfo)
+    return CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, skipEntryInfo)
+end
+
 function TalentLoadouts:SaveCurrentLoadouts()
     if not self.globalDB or not self.charDB then
         self:CheckDBIntegrity()
@@ -317,7 +321,12 @@ local function LoadLoadout(self, configInfo)
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     local treeID = configInfo.treeIDs[1]
 
-    C_Traits.ResetTree(activeConfigID, treeID)
+    if configInfo.currencyID then
+        securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
+    else
+        C_Traits.ResetTree(activeConfigID, treeID)
+    end
+
     table.sort(configInfo.entryInfo, function(a, b)
         local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
         local nodeB = C_Traits.GetNodeInfo(activeConfigID, b.nodeID)
@@ -573,9 +582,15 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     text = "Loadout Name",
     button1 = "Save",
     button2 = "Cancel",
-    OnAccept = function(self)
-       local loadoutName = self.editBox:GetText()
-       TalentLoadouts:SaveCurrentLoadout(loadoutName)
+    OnAccept = function(self, saveType)
+        local loadoutName = self.editBox:GetText()
+        if saveType == 1 then
+            TalentLoadouts:SaveCurrentLoadout(loadoutName)
+        elseif saveType == 2 then
+            TalentLoadouts:SaveCurrentClassTree(loadoutName)
+        elseif saveType == 3 then
+            TalentLoadouts:SaveCurrentSpecTree(loadoutName)
+        end
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -589,10 +604,21 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
  }
 
  local function SaveCurrentLoadout()
-    StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
+    dialog.data = 1
  end
 
- function TalentLoadouts:SaveCurrentLoadout(loadoutName)
+ local function SaveCurrentClassTree()
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
+    dialog.data = 2
+ end
+
+ local function SaveCurrentSpecTree()
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
+    dialog.data = 3
+ end
+
+ function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID)
     local currentSpecID = self.specID
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     local fakeConfigID = FindFreeConfigID()
@@ -602,12 +628,41 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     self.globalDB.configIDs[currentSpecID][fakeConfigID].fake = true
     self.globalDB.configIDs[currentSpecID][fakeConfigID].name = loadoutName
     self.globalDB.configIDs[currentSpecID][fakeConfigID].ID = fakeConfigID
+    self.globalDB.configIDs[currentSpecID][fakeConfigID].currencyID = currencyID
     self.globalDB.configIDs[currentSpecID][fakeConfigID].categories = {}
     self:InitializeTalentLoadout(fakeConfigID)
 
-    self.charDB.lastLoadout = fakeConfigID
+    if currencyID then
+        self.charDB.lastClassLoadout = fakeConfigID
+    else
+        self.charDB.lastLoadout = fakeConfigID
+    end
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj(self.globalDB.configIDs[currentSpecID][fakeConfigID])
+ end
+
+ function TalentLoadouts:SaveCurrentClassTree(loadoutName)
+    local currencyInfoClass, currencyInfoSpec = unpack(ClassTalentFrame.TalentsTab.treeCurrencyInfo)
+    if currencyInfoClass then
+        loadoutName = string.format("[C] %s", loadoutName)
+        local configID = C_ClassTalents.GetActiveConfigID()
+        C_Traits.ResetTreeByCurrency(configID, self.treeID, currencyInfoSpec.traitCurrencyID)
+        self:SaveCurrentLoadout(loadoutName, currencyInfoClass.traitCurrencyID)
+        C_Traits.RollbackConfig(configID) 
+        securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
+    end
+ end
+
+ function TalentLoadouts:SaveCurrentSpecTree(loadoutName)
+    local currencyInfoClass, currencyInfoSpec = unpack(ClassTalentFrame.TalentsTab.treeCurrencyInfo)
+    if currencyInfoClass then
+        loadoutName = string.format("[S] %s", loadoutName)
+        local configID = C_ClassTalents.GetActiveConfigID()
+        C_Traits.ResetTreeByCurrency(configID, self.treeID, currencyInfoClass.traitCurrencyID)
+        self:SaveCurrentLoadout(loadoutName, currencyInfoSpec.traitCurrencyID)
+        C_Traits.RollbackConfig(configID) 
+        securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
+    end
  end
 
  local function UpdateWithCurrentTree(self, configID)

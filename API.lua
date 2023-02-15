@@ -21,3 +21,7 @@ function ITLAPI:GetCurrentLoadout()
         return configInfo
     end
 end
+
+function ITLAPI:GetExportStringForCurrentTree()
+    return TalentLoadouts:GetExportStringForTree()
+end
