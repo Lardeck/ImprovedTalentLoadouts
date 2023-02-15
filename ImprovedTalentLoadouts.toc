@@ -1,6 +1,6 @@
 ## Interface: 100005
 ## Title: ImprovedTalentLoadouts
-## Version: v1.0.1
+## Version: @project-version@
 ## SavedVariables: TalentLoadoutProfilesDB, ImprovedTalentLoadoutsDB
 ## OptionalDeps: Simulationcraft
 ## X-Curse-Project-ID: 822393
