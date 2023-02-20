@@ -13,6 +13,36 @@ local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL:
 
 local dropdownFont = CreateFont("ITL_DropdownFont")
 
+--- Create an iterator for a hash table.
+-- @param t:table The table to create the iterator for.
+-- @param order:function A sort function for the keys.
+-- @return function The iterator usable in a loop.
+local function spairs(t, order)
+    local keys = {}
+    for k in pairs(t) do
+        keys[#keys + 1] = k
+    end
+
+    if order then
+        table.sort(
+            keys,
+            function(a, b)
+                return order(t, a, b)
+            end
+        )
+    else
+        table.sort(keys)
+    end
+
+    local i = 0
+    return function()
+        i = i + 1
+        if keys[i] then
+            return keys[i], t[keys[i]], keys[i + 1]
+        end
+    end
+end
+
 local defaultDB = {
     loadouts = {
         globalLoadouts = {},
@@ -1102,7 +1132,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
     local currentSpecID = TalentLoadouts.specID
     if level == 1 then
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
-        for categoryKey, categoryInfo in pairs(TalentLoadouts.globalDB.categories[currentSpecID]) do
+        for categoryKey, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], function(t, a, b) if t[a] and t[b] then return t[a].name < t[b].name end end) do
             LibDD:UIDropDownMenu_AddButton(
                     {
                         value = categoryInfo,
