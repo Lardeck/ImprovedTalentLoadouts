@@ -539,6 +539,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
 
 local function RenameCategory(self, categoryInfo)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_RENAME", categoryInfo.name)
+    dialog.editBox:SetText(categoryInfo.name)
     dialog.data = categoryInfo
 end
 
@@ -769,32 +770,34 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_RENAME"] = {
     text = "New Loadout Name",
     button1 = "Rename",
     button2 = "Cancel",
-    OnAccept = function(self, configID)
+    OnAccept = function(self, configInfo)
        local newName = self.editBox:GetText()
-       TalentLoadouts:RenameLoadout(configID, newName)
+       TalentLoadouts:RenameLoadout(configInfo, newName)
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
          if ( self:GetParent().button1:IsEnabled() ) then
              self:GetParent().button1:Click();
          end
-     end,
+    end,
     hasEditBox = true,
     whileDead = true,
     hideOnEscape = true,
 }
 
 local function RenameLoadout(self, configID)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_RENAME")
-    dialog.data = configID
+    local currentSpecID = TalentLoadouts.specID
+    local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+
+    if configInfo then
+        local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_RENAME")
+        dialog.editBox:SetText(configInfo.name)
+        dialog.data = configInfo
+    end
 end
 
-function TalentLoadouts:RenameLoadout(configID, newLoadoutName)
-    local currentSpecID = self.specID
-    local configInfo = self.globalDB.configIDs[currentSpecID][configID]
-    if configInfo then
-        configInfo.name = newLoadoutName
-    end
+function TalentLoadouts:RenameLoadout(configInfo, newLoadoutName)
+    configInfo.name = newLoadoutName
 
     LibDD:CloseDropDownMenus()
     self:UpdateDropdownText()
