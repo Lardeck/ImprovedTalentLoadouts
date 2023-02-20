@@ -964,23 +964,35 @@ function TalentLoadouts:LoadActionBar(actionBars)
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
         if slotInfo and (currentType ~= slotInfo.type or currentID ~= slotInfo.id or currentSubType ~= slotInfo.subType) then
+            local pickedUp = false
             ClearCursor()
             if slotInfo.type == "spell" then
                 PickupSpell(slotInfo.id)
+                pickedUp = true
             elseif slotInfo.type == "macro" then
                 if slotInfo.macroType and self[slotInfo.macroType] then
                     local id = self[slotInfo.macroType][slotInfo.key]
                     if id then
                         PickupMacro(id)
+                        pickedUp = true
                     end
                 else
                     PickupMacro(slotInfo.id)
+                    pickedUp = true
                 end
+            elseif slotInfo.type == "summonmount" then
+                local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
+                PickupSpell(spellID)
+                pickedUp = true
             elseif slotInfo.type == "item" then
                 PickupItem(slotInfo.id)
+                pickedUp = true
             end
-            PlaceAction(actionSlot)
-            ClearCursor()
+
+            if pickedUp then
+                PlaceAction(actionSlot)
+                ClearCursor()
+            end
         end
     end    
 end
