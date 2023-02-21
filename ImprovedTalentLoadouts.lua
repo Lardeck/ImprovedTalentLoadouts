@@ -1285,6 +1285,17 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 menuList = "fontSize"
             },
         level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Spec Button Type",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                menuList = "specButtonType"
+            },
+        level)
     elseif menu == "fontSize" then
         local fontSizes = {10, 11, 12, 13, 14, 15, 16, 18, 20}
         for _, fontSize in ipairs(fontSizes) do
@@ -1293,15 +1304,33 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                     text = fontSize,
                     fontObject = dropdownFont,
                     func = function()
-                        ImprovedTalentLoadoutsDB.fontSize = fontSize
+                        ImprovedTalentLoadoutsDB.options.fontSize = fontSize
                         TalentLoadouts:UpdateDropdownFont()
                         LibDD.CloseDropDownMenus()
                     end,
                     checked = function()
-                        return ImprovedTalentLoadoutsDB.fontSize == fontSize
+                        return ImprovedTalentLoadoutsDB.options.fontSize == fontSize
                     end
                 },
             level)
+        end
+    elseif menu == "specButtonType" then
+        local buttonTypes = {"text", "icon"}
+        local buttonTypesText = {"Text", "Icons"}
+        for i, buttonType in ipairs(buttonTypes) do
+            LibDD:UIDropDownMenu_AddButton(
+            {
+                text = buttonTypesText[i],
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.specButtonType = buttonType
+                    TalentLoadouts:UpdateSpecButtons()
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.specButtonType == buttonType
+                end,
+            }
+            ,level)
         end
     elseif menu == "loadout" then
         local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
@@ -1507,6 +1536,71 @@ function TalentLoadouts:InitializeDropdown()
     self:UpdateDropdownText()
 end
 
+local function CreateTextSpecButton(width, specIndex, _, specName)
+    local specButton = CreateFrame("Button", nil, TalentLoadouts.dropdown, "UIPanelButtonNoTooltipTemplate, UIButtonTemplate")
+    specButton:SetNormalAtlas("charactercreate-customize-dropdownbox")
+    specButton:SetSize(width, 30)
+
+    if #specName > ceil(width/10) then
+        specButton:SetText(specName:sub(1, ceil(width/11)) .. "...")
+    else
+        specButton:SetText(specName)
+    end
+    specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
+    return specButton
+end
+
+local function CreateIconSpecButton(width, specIndex, numSpecializations, _, icon)
+    width = 79.5
+
+    local specButton = CreateFrame("Button", nil, TalentLoadouts.dropdown)
+    specButton:SetNormalTexture(icon)
+    specButton:SetHighlightTexture(icon)
+    specButton:SetSize(39.75, 39.75)
+    specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width/2 + 1) + (width * (numSpecializations==3 and 1.25 or 1)), -2)
+    return specButton
+end
+
+function TalentLoadouts:CreateSpecButtons(specButtonType)
+    local createFunction = specButtonType == "text" and CreateTextSpecButton or CreateIconSpecButton
+    self.specButtons[specButtonType] = {}
+    local specTypeButtons = self.specButtons[specButtonType]
+
+    local numSpecializations = GetNumSpecializations()
+    local width = 318 / numSpecializations
+    for specIndex=1, numSpecializations do
+        local specName, _, icon = select(2, GetSpecializationInfo(specIndex))
+        local specButton = createFunction(width, specIndex, numSpecializations, specName, icon)
+        specButton.name = specName
+        specButton.icon = icon
+        specButton.width = width
+        specButton.type = ImprovedTalentLoadoutsDB.options.specButtonType
+        specTypeButtons[specIndex] = specButton
+        specButton.specIndex = specIndex
+        specButton:RegisterForClicks("LeftButtonDown")
+
+        specButton:SetScript("OnClick", function(self)
+            if self.specIndex ~= GetSpecialization() then
+                SetSpecialization(specIndex)
+            end
+        end)
+        
+        specButton:SetScript("OnEnter", function()
+            GameTooltip:SetOwner(specButton, "ANCHOR_TOP")
+            GameTooltip:AddLine("Change your specialization to " .. specName)
+            GameTooltip:Show()
+        end)
+        
+        specButton:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        if specIndex == GetSpecialization() then
+            specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
+        end
+    end
+end
+
 function TalentLoadouts:InitializeButtons()
     local saveButton = CreateFrame("Button", nil, self.dropdown, "UIPanelButtonNoTooltipTemplate, UIButtonTemplate")
     self.saveButton = saveButton
@@ -1537,60 +1631,32 @@ function TalentLoadouts:InitializeButtons()
     end)
 
     self.specButtons = {}
-    local numSpecializations = GetNumSpecializations()
-    local width = 318 / numSpecializations
-    for specIndex=1, numSpecializations do
-        local specName = select(2, GetSpecializationInfo(specIndex))
-        local specButton = CreateFrame("Button", nil, self.dropdown, "UIPanelButtonNoTooltipTemplate, UIButtonTemplate")
-        self.specButtons[specIndex] = specButton
-        specButton.specIndex = specIndex
-        specButton:SetNormalAtlas("charactercreate-customize-dropdownbox")
-        specButton:SetScript("OnClick", function(self)
-            if self.specIndex ~= GetSpecialization() then
-                SetSpecialization(specIndex)
-            end
-        end)
-        specButton:RegisterForClicks("LeftButtonDown")
-
-        if #specName > ceil(width/10) then
-            specButton:SetText(specName:sub(1, ceil(width/11)) .. "...")
-        else
-            specButton:SetText(specName)
-        end
-
-        specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
-        specButton:SetSize(width, 30)
-        
-        specButton:SetScript("OnEnter", function()
-            GameTooltip:SetOwner(specButton, "ANCHOR_TOP")
-            GameTooltip:AddLine("Change your specialization to " .. specName)
-            GameTooltip:Show()
-        end)
-        
-        specButton:SetScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-
-        if specIndex == GetSpecialization() then
-            specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
-        end
+    if ImprovedTalentLoadoutsDB.options.showSpecButtons then
+        self:CreateSpecButtons(ImprovedTalentLoadoutsDB.options.specButtonType)
     end
 end
 
 function TalentLoadouts:UpdateSpecButtons()
-    if not ImprovedTalentLoadoutsDB.showSpecButtons then
-        for specIndex, specButton in ipairs(self.specButtons) do
+    local specButtonType = ImprovedTalentLoadoutsDB.options.specButtonType
+
+    for _, specButtons in pairs(self.specButtons) do
+        for _, specButton in ipairs(specButtons) do
             specButton:Hide()
         end
-        return
     end
 
-    for specIndex, specButton in ipairs(self.specButtons) do
-        specButton:Show()
-        if specIndex == GetSpecialization() then
-            specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
-        else
-            specButton:GetNormalTexture():SetVertexColor(1, 1, 1)
+    if not self.specButtons[specButtonType] then
+        self:CreateSpecButtons(specButtonType)
+    end
+
+    if ImprovedTalentLoadoutsDB.options.showSpecButtons then
+        for specIndex, specButton in ipairs(self.specButtons[specButtonType]) do
+            specButton:Show()
+            if specIndex == GetSpecialization() then
+                specButton:GetNormalTexture():SetVertexColor(0, 1, 0)
+            else
+                specButton:GetNormalTexture():SetVertexColor(1, 1, 1)
+            end
         end
     end
 end
