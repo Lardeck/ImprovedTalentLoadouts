@@ -1452,7 +1452,7 @@ function TalentLoadouts:UpdateDropdownText()
 end
 
 function TalentLoadouts:UpdateDropdownFont()
-    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.fontSize or 10, "")
+    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.options.fontSize or 10, "")
 end
 
 function TalentLoadouts:InitializeHooks()
@@ -1490,7 +1490,7 @@ function TalentLoadouts:InitializeHooks()
 
     if not IsAddOnLoaded("Simulationcraft") then return end
     hooksecurefunc(SlashCmdList, "ACECONSOLE_SIMC", function()
-        if not ImprovedTalentLoadoutsDB.simc then return end
+        if not ImprovedTalentLoadoutsDB.options.simc then return end
 
         local customLoadouts
         for _, v in ITLAPI.EnumerateSpecLoadouts() do
