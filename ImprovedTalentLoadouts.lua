@@ -175,8 +175,12 @@ function TalentLoadouts:CheckForDBUpdates()
         simc = ImprovedTalentLoadoutsDB.simc == nil and true or ImprovedTalentLoadoutsDB.simc,
         applyLoadout = ImprovedTalentLoadoutsDB.applyLoadout == nil and true or ImprovedTalentLoadoutsDB.applyLoadout,
         showSpecButtons = ImprovedTalentLoadoutsDB.showSpecButtons == nil and true or ImprovedTalentLoadoutsDB.showSpecButtons,
-        specButtonType = "text"
+        specButtonType = "text",
     }
+
+    local options = ImprovedTalentLoadoutsDB.options
+    options.loadActionbars = options.loadActionbars == nil and true or options.loadActionbars
+    options.clearEmptySlots = options.clearEmptySlots == nil and false or options.clearEmptySlots
 end
 
 
@@ -376,24 +380,25 @@ local function LoadLoadout(self, configInfo)
         end
     end
 
-    if ImprovedTalentLoadoutsDB.options.applyLoadout then
-        local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
-        if canChange then
-            TalentLoadouts.pendingLoadout = nil
-            C_ClassTalents.SaveConfig(configInfo.ID)
-            C_ClassTalents.CommitConfig(configInfo.ID)
-            TalentLoadouts.charDB.lastLoadout = configInfo.ID
-            TalentLoadouts:UpdateDropdownText()
-            TalentLoadouts:UpdateDataObj(configInfo)
-            C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
-            ClassTalentFrame.TalentsTab.LoadoutDropDown:ClearSelection()
+    local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
+    if not canChange then 
+        TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
+        return 
+    end
 
-            if configInfo.actionBars then
-                TalentLoadouts:LoadActionBar(configInfo.actionBars)
-            end
-        else
-            TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
-        end
+    if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
+        TalentLoadouts:LoadActionBar(configInfo.actionBars)
+    end
+
+    if ImprovedTalentLoadoutsDB.options.applyLoadout then
+        TalentLoadouts.pendingLoadout = nil
+        C_ClassTalents.SaveConfig(configInfo.ID)
+        C_ClassTalents.CommitConfig(configInfo.ID)
+        TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts:UpdateDropdownText()
+        TalentLoadouts:UpdateDataObj(configInfo)
+        C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
+        ClassTalentFrame.TalentsTab.LoadoutDropDown:ClearSelection()
     else
         TalentLoadouts.currentLoadout = TalentLoadouts.charDB.lastLoadout
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
@@ -1024,6 +1029,9 @@ function TalentLoadouts:LoadActionBar(actionBars)
                 PlaceAction(actionSlot)
                 ClearCursor()
             end
+        elseif ImprovedTalentLoadoutsDB.options.clearEmptySlots and not slotInfo and currentType then
+            PickupAction(actionSlot)
+            ClearCursor()
         end
     end    
 end
@@ -1240,6 +1248,39 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.applyLoadout
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Action Bars with Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadActionbars = not ImprovedTalentLoadoutsDB.options.loadActionbars
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadActionbars
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Clear Slots when loading Action Bars",
+                isNotRadio = true,
+                minWidth = 170,
+                tooltipTitle = "|cffff0000WARNING! Use this option at your own risk!|r",
+                tooltipText = "This will remove an action from a slot if it was empty when you've saved the action bars. It's unclear if this affects the action bars of other specs.",
+                tooltipOnButton = 1,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.clearEmptySlots = not ImprovedTalentLoadoutsDB.options.clearEmptySlots
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.clearEmptySlots
                 end
             },
         level)
