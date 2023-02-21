@@ -118,7 +118,7 @@ function TalentLoadouts:Initialize()
         ImprovedTalentLoadoutsDB.classesInitialized = true
     end
     self:CheckForDBUpdates()
-    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.fontSize, "")
+    dropdownFont:SetFont(GameFontNormal:GetFont(), ImprovedTalentLoadoutsDB.options.fontSize, "")
 end
 
 function TalentLoadouts:InitializeClassDBs()
@@ -170,15 +170,13 @@ function TalentLoadouts:CheckDBIntegrity()
 end
 
 function TalentLoadouts:CheckForDBUpdates()
-    if ImprovedTalentLoadoutsDB.applyLoadout == nil then
-        ImprovedTalentLoadoutsDB.applyLoadout = true
-    end
-
-    if ImprovedTalentLoadoutsDB.showSpecButtons == nil then
-        ImprovedTalentLoadoutsDB.showSpecButtons = true
-    end
-
-    ImprovedTalentLoadoutsDB.fontSize = ImprovedTalentLoadoutsDB.fontSize or 10
+    ImprovedTalentLoadoutsDB.options = ImprovedTalentLoadoutsDB.options or {
+        fontSize = ImprovedTalentLoadoutsDB.fontSize or 10,
+        simc = ImprovedTalentLoadoutsDB.simc == nil and true or ImprovedTalentLoadoutsDB.simc,
+        applyLoadout = ImprovedTalentLoadoutsDB.applyLoadout == nil and true or ImprovedTalentLoadoutsDB.applyLoadout,
+        showSpecButtons = ImprovedTalentLoadoutsDB.showSpecButtons == nil and true or ImprovedTalentLoadoutsDB.showSpecButtons,
+        specButtonType = "text"
+    }
 end
 
 
@@ -378,7 +376,7 @@ local function LoadLoadout(self, configInfo)
         end
     end
 
-    if ImprovedTalentLoadoutsDB.applyLoadout then
+    if ImprovedTalentLoadoutsDB.options.applyLoadout then
         local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
         if canChange then
             TalentLoadouts.pendingLoadout = nil
@@ -1237,10 +1235,10 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 fontObject = dropdownFont,
                 func = function()
-                    ImprovedTalentLoadoutsDB.applyLoadout = not ImprovedTalentLoadoutsDB.applyLoadout
+                    ImprovedTalentLoadoutsDB.options.applyLoadout = not ImprovedTalentLoadoutsDB.options.applyLoadout
                 end,
                 checked = function()
-                    return ImprovedTalentLoadoutsDB.applyLoadout
+                    return ImprovedTalentLoadoutsDB.options.applyLoadout
                 end
             },
         level)
@@ -1252,10 +1250,10 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 fontObject = dropdownFont,
                 func = function()
-                    ImprovedTalentLoadoutsDB.simc = not ImprovedTalentLoadoutsDB.simc
+                    ImprovedTalentLoadoutsDB.options.simc = not ImprovedTalentLoadoutsDB.options.simc
                 end,
                 checked = function()
-                    return ImprovedTalentLoadoutsDB.simc
+                    return ImprovedTalentLoadoutsDB.options.simc
                 end
             },
         level)
@@ -1267,11 +1265,11 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 fontObject = dropdownFont,
                 func = function()
-                    ImprovedTalentLoadoutsDB.showSpecButtons = not ImprovedTalentLoadoutsDB.showSpecButtons
+                    ImprovedTalentLoadoutsDB.options.showSpecButtons = not ImprovedTalentLoadoutsDB.options.showSpecButtons
                     TalentLoadouts:UpdateSpecButtons()
                 end,
                 checked = function()
-                    return ImprovedTalentLoadoutsDB.showSpecButtons
+                    return ImprovedTalentLoadoutsDB.options.showSpecButtons
                 end 
             },
         level)
