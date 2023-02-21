@@ -1126,11 +1126,12 @@ local categoryFunctions = {
     }
 }
 
-local function LoadoutDropdownInitialize(frame, level, menu, ...)
+local function LoadoutDropdownInitialize(_, level, menu, ...)
     local currentSpecID = TalentLoadouts.specID
     if level == 1 then
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
-        for categoryKey, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], function(t, a, b) if t[a] and t[b] then return t[a].name < t[b].name end end) do
+        for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], 
+        function(t, a, b) if t[a] and t[b] and t[a].name and t[b].name then return t[a].name < t[b].name end end) do
             LibDD:UIDropDownMenu_AddButton(
                     {
                         value = categoryInfo,
