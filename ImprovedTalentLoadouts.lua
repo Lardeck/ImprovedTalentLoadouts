@@ -742,7 +742,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         local currentSpecID = TalentLoadouts.specID
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
         if configInfo then
-            local treeID = ClassTalentFrame.TalentsTab:GetTreeInfo().ID
+            local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
             local entryInfo = CreateEntryInfoFromString(importString, treeID)
         
             if entryInfo then
@@ -885,7 +885,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
-    local treeID = ClassTalentFrame.TalentsTab:GetTreeInfo().ID
+    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
     local entryInfo = CreateEntryInfoFromString(importString, treeID)
 
     if entryInfo then
