@@ -73,7 +73,8 @@ do
     RegisterEvent("TRAIT_CONFIG_CREATED")
     RegisterEvent("UPDATE_MACROS")
     RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
-    eventFrame:SetScript("OnEvent", function(self, event, arg1)
+    RegisterEvent("EQUIPMENT_SWAP_FINISHED")
+    eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
                 TalentLoadouts:Initialize()
@@ -102,6 +103,9 @@ do
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
         elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" then
+        elseif event == "EQUIPMENT_SWAP_FINISHED" and not arg1 then
+            local name = C_EquipmentSet.GetEquipmentSetInfo(arg2)
+            TalentLoadouts:Print("Equipment swap failed:", name)
         end
     end)
 end
@@ -200,8 +204,8 @@ end
 
 local function CreateEntryInfoFromString(exportString, treeID)
     local importStream = ExportUtil.MakeImportDataStream(exportString)
-    local _ = ClassTalentFrame.TalentsTab:ReadLoadoutHeader(importStream)
-    local loadoutContent = ClassTalentFrame.TalentsTab:ReadLoadoutContent(importStream, treeID)
+    local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
+    local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
     local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, treeID, loadoutContent)
 
     if success then
@@ -337,6 +341,8 @@ end
 local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
+    local inCombat = InCombatLockdown()
+
     if C_Traits.GetConfigInfo(configID) then
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
@@ -388,6 +394,10 @@ local function LoadLoadout(self, configInfo)
 
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         TalentLoadouts:LoadActionBar(configInfo.actionBars)
+    end
+
+    if not inCombat and configInfo.gearset then
+        EquipmentManager_EquipSet(configInfo.gearset)
     end
 
     if ImprovedTalentLoadoutsDB.options.applyLoadout then
@@ -1057,6 +1067,12 @@ local function RemoveFromSpecificCategory(self, configID, categoryInfo)
 end
 
 local loadoutFunctions = {
+    assignGearset = {
+        name = "Assign Gearset",
+        notCheckable = true,
+        hasArrow = true,
+        menuList = "gearset",
+    },
     updateTree = {
         name = "Update Tree",
         notCheckable = true,
@@ -1374,7 +1390,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             ,level)
         end
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "removeFromCategory", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
+        local functions = {"addToCategory", "removeFromCategory", "assignGearset", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
         local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
         if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
             configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
@@ -1479,6 +1495,32 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                         func = AddToCategory,
                     },
             level)
+        end
+    elseif menu == "gearset" then
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE]
+        if configInfo then
+            for _, equipmentSetID in ipairs(C_EquipmentSet.GetEquipmentSetIDs()) do
+                local name, icon = C_EquipmentSet.GetEquipmentSetInfo(equipmentSetID)
+
+                LibDD:UIDropDownMenu_AddButton(
+                    {
+                        arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                        text = string.format("|T%d:0|t %s", icon, name),
+                        fontObject = dropdownFont,
+                        minWidth = 170,
+                        checked = function()
+                            return configInfo.gearset and configInfo.gearset == equipmentSetID
+                        end,
+                        func = function()
+                            if configInfo.gearset and configInfo.gearset == equipmentSetID then
+                                configInfo.gearset = nil
+                            else
+                                configInfo.gearset = equipmentSetID
+                            end
+                        end
+                    },
+                level)
+            end
         end
     end
 end
