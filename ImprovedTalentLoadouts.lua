@@ -1232,6 +1232,19 @@ local loadoutFunctions = {
 }
 
 local categoryFunctions = {
+    addToCategory = {
+        name = "Add to Category",
+        hasArrow = true,
+        notCheckable = true,
+        menuList = "addToCategory"
+    },
+    removeFromCategory = {
+        name = "Remove from Category",
+        hasArrow = true,
+        notCheckable = true,
+        menuList = "removeFromCategory",
+        required = "isSubCategory",
+    },
     delete = {
         name = "Delete",
         func = DeleteCategory,
