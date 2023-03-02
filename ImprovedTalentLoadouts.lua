@@ -1589,6 +1589,10 @@ function TalentLoadouts:InitializeHooks()
         if customLoadouts and SimcEditBox then
            local hooked = true
            local text = SimcEditBox:GetText()
+
+           local outputHeader = "\n\n# From ImprovedTalentLoadouts\n#"
+           customLoadouts = outputHeader .. customLoadouts
+
            SimcEditBox:SetCursorPosition(SimcEditBox:GetNumLetters())
            SimcEditBox:HighlightText(0,0)
            SimcEditBox:Insert(customLoadouts)
