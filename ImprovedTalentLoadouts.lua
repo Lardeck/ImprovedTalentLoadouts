@@ -365,7 +365,8 @@ local function LoadLoadout(self, configInfo)
         C_Traits.ResetTree(activeConfigID, treeID)
     end
 
-    table.sort(configInfo.entryInfo, function(a, b)
+    local entryInfo = configInfo.entryInfo
+    table.sort(entryInfo, function(a, b)
         local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
         local nodeB = C_Traits.GetNodeInfo(activeConfigID, b.nodeID)
 
@@ -373,8 +374,8 @@ local function LoadLoadout(self, configInfo)
     end)
 
 
-    for i=1, #configInfo.entryInfo do
-        local entry = configInfo.entryInfo[i]
+    for i=1, #entryInfo do
+        local entry = entryInfo[i]
         local nodeInfo = C_Traits.GetNodeInfo(activeConfigID, entry.nodeID)
         if nodeInfo.canPurchaseRank and nodeInfo.isAvailable and nodeInfo.isVisible then
             C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
@@ -805,10 +806,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
         if configInfo then
             local activeConfigID = C_ClassTalents.GetActiveConfigID()
-            local exportString, entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
-            
-            configInfo.exportString = exportString
-            configInfo.entryInfo = entryInfo
+            configInfo.exportString, configInfo.entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
         end
     end
  end
