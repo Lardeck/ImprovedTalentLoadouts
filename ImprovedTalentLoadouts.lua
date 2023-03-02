@@ -477,7 +477,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_IMPORT"] = {
     button2 = "Cancel",
     OnAccept = function(self)
        local importString = self.editBox:GetText()
-       TalentLoadouts:ImportCategory(importString)
+       TalentLoadouts:ProcessCategoryImport(importString)
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -494,7 +494,7 @@ local function ImportCategory()
     StaticPopup_Show("TALENTLOADOUTS_CATEGORY_IMPORT")
 end
 
-function TalentLoadouts:ImportCategory(importString)
+function TalentLoadouts:ProcessCategoryImport(importString)
     local version, categoryString = importString:match("!PTL(%d+)!(.+)")
     local decoded = LibDeflate:DecodeForPrint(categoryString)
     if not decoded then return end
@@ -509,21 +509,51 @@ function TalentLoadouts:ImportCategory(importString)
         categories = self.globalDB.categories[self.specID]
     end
 
-    if categories[data.key] then 
-        self:Print("A category with this key already exists. You will be able to rename the category in the next update")
-        return 
-    else
-        categories[data.key] = {
-            key = data.key,
-            name = data.name,
-            loadouts = {}
-        }
+    self:ImportCategory(data)
+end
 
-        for _, configInfo in ipairs(data) do
-            local configID = TalentLoadouts:ImportLoadout(configInfo.exportString, configInfo.name, data.key)
-            tinsert(categories[data.key].loadouts, configID)
+local function GetAvailableCategoryKey(categories, key, index)
+    local newKey = string.format("%s-%d", key, index)
+    if not categories[newKey] then
+        return newKey
+    else
+        return GetAvailableCategoryKey(categories, key, index + 1)
+    end
+end
+
+function TalentLoadouts:ImportCategory(data, isSubCategory, parentKey)
+    local categories = self.globalDB.categories[self.specID]
+    if categories[data.key] then 
+        data.key = GetAvailableCategoryKey(categories, data.key, 2)
+    end
+
+    categories[data.key] = {
+        key = data.key,
+        name = data.name,
+        loadouts = {},
+        categories = {},
+        isSubCategory = isSubCategory,
+        parents = isSubCategory and {}
+    }
+
+    local categoryInfo = categories[data.key]
+    if parentKey then
+        tInsertUnique(categoryInfo.parents, parentKey)
+    end
+
+    if data.subCategories then
+        for _, subCategory in ipairs(data.subCategories) do
+            local key = self:ImportCategory(subCategory, true, data.key)
+            tInsertUnique(categoryInfo.categories, key)
         end
     end
+
+    for _, configInfo in ipairs(data) do
+        local configID = TalentLoadouts:ImportLoadout(configInfo.exportString, configInfo.name, data.key)
+        tinsert(categoryInfo.loadouts, configID)
+    end
+
+    return data.key
 end
 
 StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_EXPORT"] = {
@@ -540,16 +570,35 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_EXPORT"] = {
     hideOnEscape = true,
 }
 
-local function ExportCategory(self, categoryInfo)
-    if categoryInfo then
-        local export = {name = categoryInfo.name, key = categoryInfo.key}
-        local currentSpecID = TalentLoadouts.specID
+local function CreateCategoryExportTbl(categoryInfo)
+    local currentSpecID = TalentLoadouts.specID
+    local export = {name = categoryInfo.name, key = categoryInfo.key}
+    if categoryInfo.categories and #categoryInfo.categories > 0 then
+        export.subCategories = {}
+
+        for _, categoryKey in ipairs(categoryInfo.categories) do
+            local subCategoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
+            if subCategoryInfo then
+                tinsert(export.subCategories, CreateCategoryExportTbl(subCategoryInfo))
+            end
+        end
+    end
+
+    if categoryInfo.loadouts and #categoryInfo.loadouts > 0 then
         for _, configID in ipairs(categoryInfo.loadouts) do
             local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
             if configInfo then
                 tinsert(export, {name = configInfo.name, exportString = configInfo.exportString})
             end
         end
+    end
+
+    return export
+end
+
+local function ExportCategory(self, categoryInfo)
+    if categoryInfo then
+        local export = CreateCategoryExportTbl(categoryInfo)
 
         local serialized = LibSerialize:Serialize(export)
         local compressed = LibDeflate:CompressDeflate(serialized)
@@ -592,29 +641,70 @@ function TalentLoadouts:RenameCategory(categoryInfo, newCategoryName)
     end
 end
 
+local function RemoveCategoryFromCategory(self, parentCategory, categoryInfo, isDeletion)
+    if not isDeletion then
+        tDeleteItem(parentCategory.categories, categoryInfo.key)
+    end
+
+    if categoryInfo.parents then
+        tDeleteItem(categoryInfo.parents, parentCategory.key)
+    end
+
+    if not categoryInfo.parents or #categoryInfo.parents == 0 then
+        categoryInfo.isSubCategory = nil
+    end
+    LibDD:CloseDropDownMenus()
+end
+
 StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_DELETE"] = {
-    text = "Are you sure you want to delete the category?",
+    text = "Are you sure you want to delete the category%s?",
     button1 = "Delete",
     button2 = "Cancel",
-    OnAccept = function(self, categoryInfo)
-        TalentLoadouts:DeleteCategory(categoryInfo)
+    OnAccept = function(self, categoryInfo, withLoadouts)
+        TalentLoadouts:DeleteCategory(categoryInfo, withLoadouts)
     end,
     timeout = 0,
     whileDead = true,
     hideOnEscape = true,
  }
 
-local function DeleteCategory(self, categoryInfo)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_DELETE", categoryInfo.name)
+local function DeleteCategory(self, categoryInfo, withLoadouts)
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_DELETE", withLoadouts and " (|cffff0000including loadouts|r)" or "")
     dialog.data = categoryInfo
+    dialog.data2 = withLoadouts
 end
 
-function TalentLoadouts:DeleteCategory(categoryInfo)
+function TalentLoadouts:DeleteCategory(categoryInfo, withLoadouts)
     if categoryInfo then
         local currentSpecID = self.specID
-        for _, configInfo in pairs(self.globalDB.configIDs[currentSpecID]) do
-            if configInfo.category == categoryInfo.key then
-                configInfo.category = nil
+        if withLoadouts then
+            for _, configID in ipairs(categoryInfo.loadouts) do
+                self.globalDB.configIDs[currentSpecID][configID] = nil
+            end
+        else
+            for _, configID in ipairs(categoryInfo.loadouts) do
+                local configInfo = self.globalDB.configIDs[currentSpecID][configID]
+                if configInfo and configInfo.categories and configInfo.categories[categoryInfo.key] then
+                    configInfo.categories[categoryInfo.key] = nil
+                end
+            end
+        end
+
+        if categoryInfo.isSubCategory then
+            for _, categoryKey in ipairs(categoryInfo.parents) do
+                local parentCategoryInfo = self.globalDB.categories[currentSpecID][categoryKey]
+                if parentCategoryInfo then
+                    tDeleteItem(parentCategoryInfo.categories, categoryInfo.key)
+                end
+            end
+        end
+
+        if categoryInfo.categories then
+            for _, categoryKey in ipairs(categoryInfo.categories) do
+                local subCategoryInfo = self.globalDB.categories[currentSpecID][categoryKey]
+                if subCategoryInfo then
+                    RemoveCategoryFromCategory(nil, categoryInfo, subCategoryInfo, true)
+                end
             end
         end
 
@@ -1046,13 +1136,26 @@ function TalentLoadouts:LoadActionBar(actionBars)
     end    
 end
 
-local function AddToCategory(self, categoryInfo)
-    local configInfo = TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][L_UIDROPDOWNMENU_MENU_VALUE]
+local function AddToCategory(self, categoryInfo, value)
+    if type(value) == "number" then
+        local configInfo = TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][value]
 
-    if configInfo and categoryInfo then
-        configInfo.categories = configInfo.categories or {}
-        configInfo.categories[categoryInfo.key] = true
-        tInsertUnique(categoryInfo.loadouts, L_UIDROPDOWNMENU_MENU_VALUE)
+        if configInfo and categoryInfo then
+            configInfo.categories = configInfo.categories or {}
+            configInfo.categories[categoryInfo.key] = true
+            tInsertUnique(categoryInfo.loadouts, value)
+            LibDD:CloseDropDownMenus()
+        end
+    elseif type(value) == "table" then
+        local parentCategory = categoryInfo
+        local subCategory = value
+
+        subCategory.isSubCategory = true
+        subCategory.parents = subCategory.parents or {}
+        tInsertUnique(subCategory.parents, parentCategory.key)
+
+        parentCategory.categories = parentCategory.categories or {}
+        tInsertUnique(parentCategory.categories, subCategory.key)
         LibDD:CloseDropDownMenus()
     end
 end
@@ -1156,18 +1259,20 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
         for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], 
         function(t, a, b) if t[a] and t[b] and t[a].name and t[b].name then return t[a].name < t[b].name end end) do
-            LibDD:UIDropDownMenu_AddButton(
-                    {
-                        value = categoryInfo,
-                        colorCode = "|cFF34ebe1",
-                        text = categoryInfo.name,
-                        hasArrow = true,
-                        minWidth = 170,
-                        fontObject = dropdownFont,
-                        notCheckable = 1,
-                        menuList = "category"
-                    },
-            level)
+            if not categoryInfo.isSubCategory then
+                LibDD:UIDropDownMenu_AddButton(
+                        {
+                            value = categoryInfo,
+                            colorCode = "|cFF34ebe1",
+                            text = categoryInfo.name,
+                            hasArrow = true,
+                            minWidth = 170,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                            menuList = "category"
+                        },
+                level)
+            end
         end
 
         for configID, configInfo  in pairs(TalentLoadouts.globalDB.configIDs[currentSpecID]) do
@@ -1424,6 +1529,26 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
     elseif menu == "category" then
         local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE.key]
         if categoryInfo then
+            if categoryInfo.categories then
+                for _, categoryKey in ipairs(categoryInfo.categories) do
+                    local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
+                    if categoryInfo and categoryInfo.name then
+                        LibDD:UIDropDownMenu_AddButton(
+                        {
+                            value = categoryInfo,
+                            colorCode = "|cFF34ebe1",
+                            text = categoryInfo.name,
+                            hasArrow = true,
+                            minWidth = 170,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                            menuList = "category"
+                        },
+                level)
+                    end
+                end
+            end
+
             for _, configID in ipairs(categoryInfo.loadouts) do
                 local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
                 if configInfo and not configInfo.default then
@@ -1463,30 +1588,38 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             },
         level)
     elseif menu == "categoryOptions" then
-        local functions = {"rename", "delete", "export"}
+        local functions = {"addToCategory", "removeFromCategory", "rename", "delete", "deleteWithLoadouts", "export"}
         for _, func in ipairs(functions) do
             local info = categoryFunctions[func]
-            LibDD:UIDropDownMenu_AddButton(
-            {
-                arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
-                notCheckable = info.notCheckable and 1 or nil,
-                tooltipTitle = info.tooltipTitle,
-                tooltipOnButton = info.tooltipText and 1 or nil,
-                tooltipText = info.tooltipText,
-                text = info.name,
-                isNotRadio = true,
-                fontObject = dropdownFont,
-                func = info.func,
-                checked = info.checked,
-                minWidth = 150,
-            },
-            level)
+            if (not info.required or L_UIDROPDOWNMENU_MENU_VALUE[info.required]) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    value = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg2 = info.arg2,
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 170,
+                },
+                level)
+            end
         end
     elseif menu == "addToCategory" then
-        for _, categoryInfo in pairs(TalentLoadouts.globalDB.categories[currentSpecID]) do
+        for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], 
+        function(t, a, b) if t[a] and t[b] and t[a].name and t[b].name then return t[a].name < t[b].name end end) do
             LibDD:UIDropDownMenu_AddButton(
                     {
                         arg1 = categoryInfo,
+                        arg2 = L_UIDROPDOWNMENU_MENU_VALUE,
                         colorCode = "|cFFab96b3",
                         text = categoryInfo.name,
                         minWidth = 170,
@@ -1495,6 +1628,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                         func = AddToCategory,
                     },
             level)
+        end
+    elseif menu == "removeFromCategory" then
+        for _, categoryKey in ipairs(L_UIDROPDOWNMENU_MENU_VALUE.parents) do
+            local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
+            if categoryInfo then
+                LibDD:UIDropDownMenu_AddButton(
+                        {
+                            arg1 = categoryInfo,
+                            arg2 = L_UIDROPDOWNMENU_MENU_VALUE,
+                            colorCode = "|cFFab96b3",
+                            text = categoryInfo.name,
+                            minWidth = 170,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                            func = RemoveCategoryFromCategory,
+                        },
+                level)
+            end
         end
     elseif menu == "gearset" then
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE]
