@@ -1224,7 +1224,7 @@ local loadoutFunctions = {
         hasArrow = true,
     },
     removeFromCategory = {
-        name = "Remove from this category",
+        name = "Remove from this Category",
         func = RemoveFromSpecificCategory,
         notCheckable = true,
         level = 3,
