@@ -1237,6 +1237,12 @@ local categoryFunctions = {
         func = DeleteCategory,
         notCheckable = true,
     },
+    deleteWithLoadouts = {
+        name = "Delete including Loadouts",
+        func = DeleteCategory,
+        arg2 = true,
+        notCheckable = true,
+    },
     rename = {
         name = "Rename",
         func = RenameCategory,
