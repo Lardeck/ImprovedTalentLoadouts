@@ -194,6 +194,11 @@ function TalentLoadouts:CheckForVersionUpdates()
 end
 
 function TalentLoadouts:UpdateSpecID(isRespec)
+    if not self.loaded then
+        UIParentLoadAddOn("Blizzard_ClassTalentUI")
+        self.loaded = true
+    end
+
     self.specID = PlayerUtil.GetCurrentSpecID()
     self.treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
 
