@@ -807,6 +807,8 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         if configInfo then
             local activeConfigID = C_ClassTalents.GetActiveConfigID()
             configInfo.exportString, configInfo.entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
+
+            TalentLoadouts:Print(configInfo.name, "updated")
         end
     end
  end
