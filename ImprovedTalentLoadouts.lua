@@ -185,6 +185,7 @@ function TalentLoadouts:CheckForDBUpdates()
     local options = ImprovedTalentLoadoutsDB.options
     options.loadActionbars = options.loadActionbars == nil and true or options.loadActionbars
     options.clearEmptySlots = options.clearEmptySlots == nil and false or options.clearEmptySlots
+    options.findMacroByName = options.findMacroByName == nil and false or options.findMacroByName
 end
 
 
@@ -1060,10 +1061,11 @@ function TalentLoadouts:UpdateActionBars(configInfo)
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local actionType, id, actionSubType = GetActionInfo(actionSlot)
         if actionType then
-            local key, macroType
+            local key, macroType, macroName
             if actionType == "macro" then
                 local name, _, body = GetMacroInfo(id)
                 if name and body then
+                    macroName = name
                     body = strtrim(body:gsub("\r", ""))
                     key = string.format("%s\031%s", name, body)
                     macroType = id > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
@@ -1075,6 +1077,7 @@ function TalentLoadouts:UpdateActionBars(configInfo)
                 id = id,
                 subType = actionSubType,
                 key = key,
+                macroName = macroName,
                 macroType = macroType
             }
         end
@@ -1113,6 +1116,10 @@ function TalentLoadouts:LoadActionBar(actionBars)
             elseif slotInfo.type == "macro" then
                 if slotInfo.macroType and self[slotInfo.macroType] then
                     local id = self[slotInfo.macroType][slotInfo.key]
+                    if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
+                        id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
+                    end
+
                     if id then
                         PickupMacro(id)
                         pickedUp = true
@@ -1408,6 +1415,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.loadActionbars
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Find Macro By Name",
+                isNotRadio = true,
+                tooltipTitle = "Description:",
+                tooltipText = "Lets the AddOn find saved macros based on their names (instead of name + body).",
+                tooltipOnButton = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.findMacroByName = not ImprovedTalentLoadoutsDB.options.findMacroByName
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.findMacroByName
                 end
             },
         level)
@@ -1965,6 +1990,7 @@ function TalentLoadouts:UpdateMacros()
             }
 
             charMacros[key] = macroSlot
+            charMacros[name] = macroSlot
         elseif charMacros[macroSlot] then
             charMacros[charMacros[macroSlot].key] = nil
             charMacros[macroSlot] = nil
