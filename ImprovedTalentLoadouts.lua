@@ -1955,6 +1955,8 @@ end
 function TalentLoadouts:UpdateMacros()
     if not self.initialized then return end
 
+    self.globalMacros = {}
+    self.charMacros = {}
     local globalMacros = self.globalMacros
     local charMacros = self.charMacros
 
