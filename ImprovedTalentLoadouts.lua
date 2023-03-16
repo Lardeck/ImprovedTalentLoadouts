@@ -344,10 +344,25 @@ function TalentLoadouts:UpdateDataObj(configInfo)
     dataObj.text = dataObjText:format(name, configInfo and configInfo.name or "Unknown")
 end
 
+function TalentLoadouts:LoadGearAndLayout(configInfo)
+    local inCombat = InCombatLockdown()
+
+    if not inCombat then
+        if configInfo.gearset then
+            EquipmentManager_EquipSet(configInfo.gearset)
+        end
+
+        if configInfo.layout then
+            C_EditMode.SetActiveLayout(configInfo.layout)
+        end
+    else
+        self:Print("Can't change gear or layouts in combat")
+    end
+end
+
 local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
-    local inCombat = InCombatLockdown()
 
     if C_Traits.GetConfigInfo(configID) then
         C_ClassTalents.LoadConfig(configID, true)
@@ -359,6 +374,8 @@ local function LoadLoadout(self, configInfo)
         if configInfo.actionBars then
             TalentLoadouts:LoadActionBar(configInfo.actionBars)
         end
+        
+        TalentLoadouts:LoadGearAndLayout(configInfo)
         return
     end
 
@@ -403,9 +420,7 @@ local function LoadLoadout(self, configInfo)
         TalentLoadouts:LoadActionBar(configInfo.actionBars)
     end
 
-    if not inCombat and configInfo.gearset then
-        EquipmentManager_EquipSet(configInfo.gearset)
-    end
+    TalentLoadouts:LoadGearAndLayout(configInfo)
 
     if ImprovedTalentLoadoutsDB.options.applyLoadout then
         TalentLoadouts.pendingLoadout = nil
@@ -1188,6 +1203,12 @@ local loadoutFunctions = {
         hasArrow = true,
         menuList = "gearset",
     },
+    assignLayout = {
+        name = "Assign Layout",
+        notCheckable = true,
+        hasArrow = true,
+        menuList = "layout",
+    },
     updateTree = {
         name = "Update Tree",
         notCheckable = true,
@@ -1544,7 +1565,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             ,level)
         end
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "removeFromCategory", "assignGearset", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
+        local functions = {"addToCategory", "removeFromCategory", "assignGearset", "assignLayout", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
         local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
         if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
             configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
@@ -1716,6 +1737,34 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                                 configInfo.gearset = nil
                             else
                                 configInfo.gearset = equipmentSetID
+                            end
+                        end
+                    },
+                level)
+            end
+        end
+    elseif menu == "layout" then
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE]
+        if configInfo then
+            local layoutsInfo =  C_EditMode.GetLayouts()
+            if not layoutsInfo then return end
+
+            for index, info in ipairs(layoutsInfo.layouts) do
+                local layoutIndex = index + 2
+
+                LibDD:UIDropDownMenu_AddButton(
+                    {
+                        text = info.layoutName,
+                        fontObject = dropdownFont,
+                        minWidth = 170,
+                        checked = function()
+                            return configInfo.layout and configInfo.layout == layoutIndex
+                        end,
+                        func = function()
+                            if configInfo.layout and configInfo.layout == layoutIndex then
+                                configInfo.layout = nil
+                            else
+                                configInfo.layout = layoutIndex
                             end
                         end
                     },
