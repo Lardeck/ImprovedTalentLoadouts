@@ -1696,20 +1696,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             end
         end
     elseif menu == "addToCategory" then
+        local isCategory = type(L_UIDROPDOWNMENU_MENU_VALUE) == "table"
+
         for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], 
         function(t, a, b) if t[a] and t[b] and t[a].name and t[b].name then return t[a].name < t[b].name end end) do
-            LibDD:UIDropDownMenu_AddButton(
-                    {
-                        arg1 = categoryInfo,
-                        arg2 = L_UIDROPDOWNMENU_MENU_VALUE,
-                        colorCode = "|cFFab96b3",
-                        text = categoryInfo.name,
-                        minWidth = 170,
-                        fontObject = dropdownFont,
-                        notCheckable = 1,
-                        func = AddToCategory,
-                    },
-            level)
+            if not isCategory or categoryInfo.key ~= L_UIDROPDOWNMENU_MENU_VALUE.key then
+                LibDD:UIDropDownMenu_AddButton(
+                        {
+                            arg1 = categoryInfo,
+                            arg2 = L_UIDROPDOWNMENU_MENU_VALUE,
+                            colorCode = "|cFFab96b3",
+                            text = categoryInfo.name,
+                            minWidth = 170,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                            func = AddToCategory,
+                        },
+                level)
+            end
         end
     elseif menu == "removeFromCategory" then
         for _, categoryKey in ipairs(L_UIDROPDOWNMENU_MENU_VALUE.parents) do
