@@ -192,6 +192,18 @@ end
 function TalentLoadouts:CheckForVersionUpdates()
     local currentVersion = ImprovedTalentLoadoutsDB.version
     ImprovedTalentLoadoutsDB.version = internalVersion
+
+    for _, categoryInfo in pairs(TalentLoadouts.globalDB.categories[self.specID]) do
+        if categoryInfo.parents then
+            local index = tIndexOf(categoryInfo.parents, categoryInfo.key)
+            if index then
+                tremove(categoryInfo.parents, index)
+                if #categoryInfo.parents == 0 then
+                    categoryInfo.isSubCategory = nil
+                end
+            end
+        end
+    end
 end
 
 function TalentLoadouts:UpdateSpecID(isRespec)
