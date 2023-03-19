@@ -428,6 +428,10 @@ local function LoadLoadout(self, configInfo)
 
     local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
     if not canChange then 
+        if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
+            configInfo.error = true
+        end
+
         TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
         return 
     end
@@ -844,6 +848,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         if configInfo then
             local activeConfigID = C_ClassTalents.GetActiveConfigID()
             configInfo.exportString, configInfo.entryInfo = CreateExportString(configInfo, activeConfigID, currentSpecID)
+            configInfo.error = nil
 
             TalentLoadouts:Print(configInfo.name, "updated")
         end
@@ -891,6 +896,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 
                 configInfo.entryInfo = entryInfo
                 configInfo.exportString = importString
+                configInfo.error = nil
             else
                 self:Print("Invalid import string.")
             end
@@ -1345,7 +1351,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         for configID, configInfo  in pairs(TalentLoadouts.globalDB.configIDs[currentSpecID]) do
             if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
-                local color = configInfo.fake and "|cFF33ff96" or "|cFFFFD100"
+                local color = (configInfo.error and "|cFFFF0000") or (configInfo.fake and "|cFF33ff96") or "|cFFFFD100"
                 LibDD:UIDropDownMenu_AddButton(
                     {
                         arg1 = configInfo,
