@@ -150,6 +150,7 @@ function TalentLoadouts:InitializeCharacterDB()
     self.charMacros = ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName]
     self.globalMacros = ImprovedTalentLoadoutsDB.actionbars.macros.global
     self.specID = PlayerUtil.GetCurrentSpecID()
+    self:CheckDBIntegrity()
     self:CheckForVersionUpdates()
     self.initialized = true
     self:UpdateMacros()
@@ -193,13 +194,16 @@ function TalentLoadouts:CheckForVersionUpdates()
     local currentVersion = ImprovedTalentLoadoutsDB.version
     ImprovedTalentLoadoutsDB.version = internalVersion
 
-    for _, categoryInfo in pairs(TalentLoadouts.globalDB.categories[self.specID]) do
-        if categoryInfo.parents then
-            local index = tIndexOf(categoryInfo.parents, categoryInfo.key)
-            if index then
-                tremove(categoryInfo.parents, index)
-                if #categoryInfo.parents == 0 then
-                    categoryInfo.isSubCategory = nil
+    local categories = TalentLoadouts.globalDB.categories[self.specID]
+    if categories then
+        for _, categoryInfo in pairs(categories) do
+            if categoryInfo.parents then
+                local index = tIndexOf(categoryInfo.parents, categoryInfo.key)
+                if index then
+                    tremove(categoryInfo.parents, index)
+                    if #categoryInfo.parents == 0 then
+                        categoryInfo.isSubCategory = nil
+                    end
                 end
             end
         end
