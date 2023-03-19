@@ -224,12 +224,11 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     end
 end
 
-local function CreateEntryInfoFromString(exportString, treeID)
+local function CreateEntryInfoFromString(configID, exportString, treeID)
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
     local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, treeID, loadoutContent)
-
     if success then
         return loadoutEntryInfo
     end
@@ -248,7 +247,7 @@ local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
 
     local loadoutEntryInfo
     if not skipEntryInfo then
-        loadoutEntryInfo = CreateEntryInfoFromString(exportString, treeID)
+        loadoutEntryInfo = CreateEntryInfoFromString(configID, exportString, treeID)
     end
 
     return exportString, loadoutEntryInfo, treeHash
@@ -885,7 +884,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
         if configInfo then
             local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
-            local entryInfo = CreateEntryInfoFromString(importString, treeID)
+            local entryInfo = CreateEntryInfoFromString(configID, importString, treeID)
         
             if entryInfo then
                 if configID == self.charDB.lastLoadout then
@@ -1029,7 +1028,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     if not fakeConfigID then return end
 
     local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
-    local entryInfo = CreateEntryInfoFromString(importString, treeID)
+    local entryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
     if entryInfo then
         self.globalDB.configIDs[currentSpecID][fakeConfigID] = {
