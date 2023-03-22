@@ -1,4 +1,4 @@
-## Interface: 100005
+## Interface: 100007
 ## Title: ImprovedTalentLoadouts
 ## Version: @project-version@
 ## SavedVariables: TalentLoadoutProfilesDB, ImprovedTalentLoadoutsDB
