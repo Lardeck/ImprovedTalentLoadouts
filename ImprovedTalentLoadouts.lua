@@ -295,9 +295,9 @@ end
 
 function TalentLoadouts:UpdateConfig(configID)
     if not self.loaded then
-        EventUtil.ContinueOnAddOnLoaded("Blizzard_ClassTalentUI", GenerateClosure(self.UpdateConfig, self, configID));
         UIParentLoadAddOn("Blizzard_ClassTalentUI")
         self.loaded = true
+        self:UpdateConfig(configID)
         return
     end
 
