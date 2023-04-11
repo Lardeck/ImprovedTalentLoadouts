@@ -458,6 +458,7 @@ local function LoadLoadout(self, configInfo)
         --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     end
 
+    configInfo.error = nil
     LibDD:CloseDropDownMenus()
 end
 
