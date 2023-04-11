@@ -187,6 +187,7 @@ function TalentLoadouts:CheckForDBUpdates()
     options.loadActionbars = options.loadActionbars == nil and true or options.loadActionbars
     options.clearEmptySlots = options.clearEmptySlots == nil and false or options.clearEmptySlots
     options.findMacroByName = options.findMacroByName == nil and false or options.findMacroByName
+    options.loadBlizzard = options.loadBlizzard == nil and false or options.loadBlizzard
 end
 
 
@@ -382,17 +383,12 @@ local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
 
-    if C_Traits.GetConfigInfo(configID) then
+    if ImprovedTalentLoadoutsDB.options.loadBlizzard and C_Traits.GetConfigInfo(configID) then
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj(configInfo)
-
-        if configInfo.actionBars then
-            TalentLoadouts:LoadActionBar(configInfo.actionBars)
-        end
-        
         TalentLoadouts:LoadGearAndLayout(configInfo)
         return
     end
@@ -1497,6 +1493,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.clearEmptySlots
                 end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Blizzard Loadouts (yellow)",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                tooltipOnButton = 1,
+                tooltipTitle = "Load Blizzard Loadouts",
+                tooltipText = "Load the yellow loadouts (if they exists) with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn for the yellow loadouts.",
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end 
             },
         level)
 
