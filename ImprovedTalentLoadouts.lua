@@ -1139,10 +1139,12 @@ function TalentLoadouts:LoadActionBar(actionBars)
     local success, data = LibSerialize:Deserialize(decompressed)
     if not success then return end
 
+    self:UpdateMacros()
+
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
-        if slotInfo and (currentType ~= slotInfo.type or currentID ~= slotInfo.id or currentSubType ~= slotInfo.subType) then
+        if slotInfo then
             local pickedUp = false
             ClearCursor()
             if slotInfo.type == "spell" then
@@ -1154,14 +1156,12 @@ function TalentLoadouts:LoadActionBar(actionBars)
                     if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
-
                     if id then
                         PickupMacro(id)
                         pickedUp = true
+                    else
+                        self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, slotInfo.body:gsub("\n", " "))
                     end
-                else
-                    PickupMacro(slotInfo.id)
-                    pickedUp = true
                 end
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
@@ -2047,9 +2047,9 @@ function TalentLoadouts:UpdateMacros()
     if not self.initialized then return end
 
     self.globalMacros = {}
-    self.charMacros = {}
+    self.characterMacros = {}
     local globalMacros = self.globalMacros
-    local charMacros = self.charMacros
+    local charMacros = self.characterMacros
 
     for macroSlot = 1, MAX_ACCOUNT_MACROS do
         local name, _, body = GetMacroInfo(macroSlot)
@@ -2073,7 +2073,7 @@ function TalentLoadouts:UpdateMacros()
     for macroSlot = MAX_ACCOUNT_MACROS + 1, (MAX_ACCOUNT_MACROS + MAX_CHARACTER_MACROS) do
         local name, _, body = GetMacroInfo(macroSlot)
         if name then
-            body = strtrim(body:gsub("\r", ""))
+        body = strtrim(body:gsub("\r", ""))
             local key = string.format("%s\031%s", name, body)
             charMacros[macroSlot] = {
                 slot = macroSlot,
@@ -2089,4 +2089,7 @@ function TalentLoadouts:UpdateMacros()
             charMacros[macroSlot] = nil
         end
     end
+
+    --backwards compatibility
+    self.charMacros = self.characterMacros
 end
