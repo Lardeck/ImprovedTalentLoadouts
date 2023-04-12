@@ -1161,7 +1161,7 @@ function TalentLoadouts:LoadActionBar(actionBars)
                         PickupMacro(id)
                         pickedUp = true
                     else
-                        self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, slotInfo.body:gsub("\n", " "))
+                        self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, (slotInfo.body or ""):gsub("\n", " "))
                     end
                 end
             elseif slotInfo.type == "summonmount" then
