@@ -187,6 +187,7 @@ function TalentLoadouts:CheckForDBUpdates()
     options.loadActionbars = options.loadActionbars == nil and true or options.loadActionbars
     options.clearEmptySlots = options.clearEmptySlots == nil and false or options.clearEmptySlots
     options.findMacroByName = options.findMacroByName == nil and false or options.findMacroByName
+    options.loadBlizzard = options.loadBlizzard == nil and false or options.loadBlizzard
 end
 
 
@@ -295,9 +296,9 @@ end
 
 function TalentLoadouts:UpdateConfig(configID)
     if not self.loaded then
-        EventUtil.ContinueOnAddOnLoaded("Blizzard_ClassTalentUI", GenerateClosure(self.UpdateConfig, self, configID));
         UIParentLoadAddOn("Blizzard_ClassTalentUI")
         self.loaded = true
+        self:UpdateConfig(configID)
         return
     end
 
@@ -382,17 +383,12 @@ local function LoadLoadout(self, configInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
 
-    if C_Traits.GetConfigInfo(configID) then
+    if ImprovedTalentLoadoutsDB.options.loadBlizzard and C_Traits.GetConfigInfo(configID) then
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj(configInfo)
-
-        if configInfo.actionBars then
-            TalentLoadouts:LoadActionBar(configInfo.actionBars)
-        end
-        
         TalentLoadouts:LoadGearAndLayout(configInfo)
         return
     end
@@ -462,6 +458,7 @@ local function LoadLoadout(self, configInfo)
         --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     end
 
+    configInfo.error = nil
     LibDD:CloseDropDownMenus()
 end
 
@@ -1143,10 +1140,12 @@ function TalentLoadouts:LoadActionBar(actionBars)
     local success, data = LibSerialize:Deserialize(decompressed)
     if not success then return end
 
+    self:UpdateMacros()
+
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
-        if slotInfo and (currentType ~= slotInfo.type or currentID ~= slotInfo.id or currentSubType ~= slotInfo.subType) then
+        if slotInfo then
             local pickedUp = false
             ClearCursor()
             if slotInfo.type == "spell" then
@@ -1158,14 +1157,12 @@ function TalentLoadouts:LoadActionBar(actionBars)
                     if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
-
                     if id then
                         PickupMacro(id)
                         pickedUp = true
+                    else
+                        self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, (slotInfo.body or ""):gsub("\n", " "))
                     end
-                else
-                    PickupMacro(slotInfo.id)
-                    pickedUp = true
                 end
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
@@ -1497,6 +1494,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.clearEmptySlots
                 end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Blizzard Loadouts (yellow)",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                tooltipOnButton = 1,
+                tooltipTitle = "Load Blizzard Loadouts",
+                tooltipText = "Load the yellow loadouts (if they exists) with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn for the yellow loadouts.",
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end 
             },
         level)
 
@@ -2033,9 +2048,9 @@ function TalentLoadouts:UpdateMacros()
     if not self.initialized then return end
 
     self.globalMacros = {}
-    self.charMacros = {}
+    self.characterMacros = {}
     local globalMacros = self.globalMacros
-    local charMacros = self.charMacros
+    local charMacros = self.characterMacros
 
     for macroSlot = 1, MAX_ACCOUNT_MACROS do
         local name, _, body = GetMacroInfo(macroSlot)
@@ -2059,7 +2074,7 @@ function TalentLoadouts:UpdateMacros()
     for macroSlot = MAX_ACCOUNT_MACROS + 1, (MAX_ACCOUNT_MACROS + MAX_CHARACTER_MACROS) do
         local name, _, body = GetMacroInfo(macroSlot)
         if name then
-            body = strtrim(body:gsub("\r", ""))
+        body = strtrim(body:gsub("\r", ""))
             local key = string.format("%s\031%s", name, body)
             charMacros[macroSlot] = {
                 slot = macroSlot,
@@ -2075,4 +2090,7 @@ function TalentLoadouts:UpdateMacros()
             charMacros[macroSlot] = nil
         end
     end
+
+    --backwards compatibility
+    self.charMacros = self.characterMacros
 end
