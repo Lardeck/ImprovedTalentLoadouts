@@ -803,12 +803,23 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     if not fakeConfigID then return end
 
     self.globalDB.configIDs[currentSpecID][fakeConfigID] = C_Traits.GetConfigInfo(activeConfigID)
-    self.globalDB.configIDs[currentSpecID][fakeConfigID].fake = true
-    self.globalDB.configIDs[currentSpecID][fakeConfigID].name = loadoutName
-    self.globalDB.configIDs[currentSpecID][fakeConfigID].ID = fakeConfigID
-    self.globalDB.configIDs[currentSpecID][fakeConfigID].currencyID = currencyID
-    self.globalDB.configIDs[currentSpecID][fakeConfigID].categories = {}
-    self:InitializeTalentLoadout(fakeConfigID)
+
+    local configInfo = self.globalDB.configIDs[currentSpecID][fakeConfigID]
+    configInfo.fake = true
+    configInfo.name = loadoutName
+    configInfo.ID = fakeConfigID
+    configInfo.currencyID = currencyID
+    configInfo.categories = {}
+
+    local isInspecting = ClassTalentFrame.TalentsTab:IsInspecting()
+    if isInspecting then
+        local treeID = configInfo.treeIDs[1]
+        local exportString = C_Traits.GenerateInspectImportString(ClassTalentFrame:GetInspectUnit())
+        configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = exportString, CreateEntryInfoFromString(activeConfigID, exportString, treeID), C_Traits.GetTreeHash(treeID)
+        return
+    else
+        self:InitializeTalentLoadout(fakeConfigID, exportString)
+    end
 
     if currencyID then
         self.charDB.lastClassLoadout = fakeConfigID
