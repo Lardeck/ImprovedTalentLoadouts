@@ -414,8 +414,11 @@ local function LoadLoadout(self, configInfo)
     for i=1, #entryInfo do
         local entry = entryInfo[i]
         local nodeInfo = C_Traits.GetNodeInfo(activeConfigID, entry.nodeID)
-        if nodeInfo.canPurchaseRank and nodeInfo.isAvailable and nodeInfo.isVisible then
-            C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
+        if nodeInfo.isAvailable and nodeInfo.isVisible then
+            if nodeInfo.type == Enum.TraitNodeType.Selection then
+                C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
+            end
+
             if C_Traits.CanPurchaseRank(activeConfigID, entry.nodeID, entry.selectionEntryID) then
                 for rank=1, entry.ranksPurchased do
                     C_Traits.PurchaseRank(activeConfigID, entry.nodeID)
