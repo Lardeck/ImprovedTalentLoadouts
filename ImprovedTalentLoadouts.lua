@@ -184,10 +184,19 @@ function TalentLoadouts:CheckForDBUpdates()
     }
 
     local options = ImprovedTalentLoadoutsDB.options
-    options.loadActionbars = options.loadActionbars == nil and true or options.loadActionbars
-    options.clearEmptySlots = options.clearEmptySlots == nil and false or options.clearEmptySlots
-    options.findMacroByName = options.findMacroByName == nil and false or options.findMacroByName
-    options.loadBlizzard = options.loadBlizzard == nil and false or options.loadBlizzard
+    local optionKeys = {
+        ["loadActionbars"] = true,
+        ["clearEmptySlots"] = false,
+        ["findMacroByName"] = false,
+        ["loadBlizzard"] = false,
+        ["showCategoryName"] = false
+    }
+
+    for key, defaultValue in ipairs(optionKeys) do
+        if options[key] == nil then
+            options[key] = defaultValue
+        end
+    end
 end
 
 
