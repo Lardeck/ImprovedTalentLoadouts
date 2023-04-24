@@ -98,6 +98,7 @@ do
         elseif event == "UPDATE_MACROS" then
             TalentLoadouts:UpdateMacros()
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
+            TalentLoadouts.charDB.lastCategory = nil
             TalentLoadouts:UpdateSpecID(true)
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
@@ -388,7 +389,7 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
     end
 end
 
-local function LoadLoadout(self, configInfo)
+local function LoadLoadout(self, configInfo, categoryInfo)
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
 
@@ -396,6 +397,7 @@ local function LoadLoadout(self, configInfo)
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts.charDB.lastCategory = categoryInfo
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj(configInfo)
         TalentLoadouts:LoadGearAndLayout(configInfo)
@@ -457,6 +459,7 @@ local function LoadLoadout(self, configInfo)
         C_ClassTalents.SaveConfig(configInfo.ID)
         C_ClassTalents.CommitConfig(configInfo.ID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts.charDB.lastCategory = categoryInfo
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj(configInfo)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
@@ -464,8 +467,9 @@ local function LoadLoadout(self, configInfo)
     else
         TalentLoadouts.currentLoadout = TalentLoadouts.charDB.lastLoadout
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts.charDB.lastCategory = categoryInfo
         TalentLoadouts:UpdateDropdownText()
-        TalentLoadouts:UpdateDataObj(configInfo)
+        TalentLoadouts:UpdateDataObj()
         TalentLoadouts.pendingLoadout = configInfo
         --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     end
