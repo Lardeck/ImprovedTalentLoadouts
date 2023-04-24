@@ -1559,6 +1559,22 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Display Category Name",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.showCategoryName = not ImprovedTalentLoadoutsDB.options.showCategoryName
+                    TalentLoadouts:UpdateDropdownText()
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.showCategoryName
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Show Spec Buttons",
                 isNotRadio = true,
                 minWidth = 170,
@@ -1692,6 +1708,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                     LibDD:UIDropDownMenu_AddButton(
                         {
                             arg1 = configInfo,
+                            arg2 = categoryInfo,
                             value = {configID, categoryInfo},
                             colorCode = color,
                             text = configInfo.name,
@@ -1850,7 +1867,13 @@ function TalentLoadouts:UpdateDropdownText()
 
     local configInfo = self.charDB.lastLoadout and self.globalDB.configIDs[currentSpecID][self.charDB.lastLoadout]
     dropdownText = configInfo and configInfo.name or "Unknown"
-    LibDD:UIDropDownMenu_SetText(self.dropdown, dropdownText)
+
+    if self.charDB.lastCategory and ImprovedTalentLoadoutsDB.options.showCategoryName then
+        dropdownText = string.format("|cFF34ebe1[%s]|r %s", self.charDB.lastCategory.name, dropdownText)
+        LibDD:UIDropDownMenu_SetText(self.dropdown, dropdownText)
+    else
+        LibDD:UIDropDownMenu_SetText(self.dropdown, dropdownText)
+    end
 end
 
 function TalentLoadouts:UpdateDropdownFont()
