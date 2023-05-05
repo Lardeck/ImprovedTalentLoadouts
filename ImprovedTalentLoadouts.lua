@@ -12,6 +12,7 @@ local dataObjText = "ITL: %s, %s"
 local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL: Spec, Loadout"})
 
 local dropdownFont = CreateFont("ITL_DropdownFont")
+local iterateLoadouts
 
 --- Create an iterator for a hash table.
 -- @param t:table The table to create the iterator for.
@@ -40,6 +41,12 @@ local function spairs(t, order)
         if keys[i] then
             return keys[i], t[keys[i]], keys[i + 1]
         end
+    end
+end
+
+local function sortByName(t, a, b)
+    if t[a] and t[b] and t[a].name and t[b].name then
+        return t[a].name < t[b].name
     end
 end
 
@@ -155,6 +162,7 @@ function TalentLoadouts:InitializeCharacterDB()
     self:CheckForVersionUpdates()
     self.initialized = true
     self:UpdateMacros()
+    self:UpdateIterator()
 end
 
 -- Not sure how that can happen but apparently it was a problem for someone. Maybe there is another AddOn that overwrites my db?
@@ -190,7 +198,8 @@ function TalentLoadouts:CheckForDBUpdates()
         ["clearEmptySlots"] = false,
         ["findMacroByName"] = false,
         ["loadBlizzard"] = false,
-        ["showCategoryName"] = false
+        ["showCategoryName"] = false,
+        ["sortLoadoutsByName"] = false
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -238,7 +247,16 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     end
 end
 
+function TalentLoadouts:UpdateIterator()
+    if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
+        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[self.specID], sortByName)
+    else
+        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[self.specID])
+    end
+end
+
 local function CreateEntryInfoFromString(configID, exportString, treeID)
+    configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
