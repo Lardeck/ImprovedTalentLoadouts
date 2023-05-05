@@ -1428,7 +1428,18 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Create Loadout from current Tree",
+                text = "Create Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = SaveCurrentLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Create Loadout + Apply",
+                arg1 = true,
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
@@ -1443,6 +1454,16 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Loadout + Apply",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = ImportCustomLoadoutAndApply,
             },
         level)
 
@@ -1478,105 +1499,6 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
     elseif menu == "options" then
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Automatically apply Loadout",
-                isNotRadio = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.applyLoadout = not ImprovedTalentLoadoutsDB.options.applyLoadout
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.applyLoadout
-                end
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Load Action Bars with Loadout",
-                isNotRadio = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.loadActionbars = not ImprovedTalentLoadoutsDB.options.loadActionbars
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.loadActionbars
-                end
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Find Macro By Name",
-                isNotRadio = true,
-                tooltipTitle = "Description:",
-                tooltipText = "Lets the AddOn find saved macros based on their names (instead of name + body).",
-                tooltipOnButton = 1,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.findMacroByName = not ImprovedTalentLoadoutsDB.options.findMacroByName
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.findMacroByName
-                end
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Clear Slots when loading Action Bars",
-                isNotRadio = true,
-                minWidth = 170,
-                tooltipTitle = "|cffff0000WARNING! Use this option at your own risk!|r",
-                tooltipText = "This will remove an action from a slot if it was empty when you've saved the action bars. It's unclear if this affects the action bars of other specs.",
-                tooltipOnButton = 1,
-                fontObject = dropdownFont,
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.clearEmptySlots = not ImprovedTalentLoadoutsDB.options.clearEmptySlots
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.clearEmptySlots
-                end
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Load Blizzard Loadouts (yellow)",
-                isNotRadio = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                tooltipOnButton = 1,
-                tooltipTitle = "Load Blizzard Loadouts",
-                tooltipText = "Load the yellow loadouts (if they exists) with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn for the yellow loadouts.",
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.loadBlizzard
-                end 
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Add Loadouts to /simc",
-                isNotRadio = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                func = function()
-                    ImprovedTalentLoadoutsDB.options.simc = not ImprovedTalentLoadoutsDB.options.simc
-                end,
-                checked = function()
-                    return ImprovedTalentLoadoutsDB.options.simc
-                end
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
                 text = "Display Category Name",
                 isNotRadio = true,
                 minWidth = 170,
@@ -1609,12 +1531,39 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Font Size",
+                text = "Sort Loadouts by Name",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.sortLoadoutsByName = not ImprovedTalentLoadoutsDB.options.sortLoadoutsByName
+                    TalentLoadouts:UpdateIterator()
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.sortLoadoutsByName
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Loadouts",
                 notCheckable = 1,
                 minWidth = 170,
                 fontObject = dropdownFont,
                 hasArrow = true,
-                menuList = "fontSize"
+                menuList = "globalLoadoutOptions"
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Action Bars",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                menuList = "actionBarOptions"
             },
         level)
 
@@ -1628,7 +1577,18 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 menuList = "specButtonType"
             },
         level)
-    elseif menu == "fontSize" then
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Font Size",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                menuList = "fontSizeOptions"
+            },
+        level)
+    elseif menu == "fontSizeOptions" then
         local fontSizes = {10, 11, 12, 13, 14, 15, 16, 18, 20}
         for _, fontSize in ipairs(fontSizes) do
             LibDD:UIDropDownMenu_AddButton(
@@ -1646,6 +1606,105 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 },
             level)
         end
+    elseif menu == "actionBarOptions" then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Action Bars with Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadActionbars = not ImprovedTalentLoadoutsDB.options.loadActionbars
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadActionbars
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Clear Slots when loading Action Bars",
+                isNotRadio = true,
+                minWidth = 170,
+                tooltipTitle = "|cffff0000WARNING! Use this option at your own risk!|r",
+                tooltipText = "This will remove an action from a slot if it was empty when you've saved the action bars. It's unclear if this affects the action bars of other specs.",
+                tooltipOnButton = 1,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.clearEmptySlots = not ImprovedTalentLoadoutsDB.options.clearEmptySlots
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.clearEmptySlots
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Find Macro By Name",
+                isNotRadio = true,
+                tooltipTitle = "Description:",
+                tooltipText = "Lets the AddOn find saved macros based on their names (instead of name + body).",
+                tooltipOnButton = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.findMacroByName = not ImprovedTalentLoadoutsDB.options.findMacroByName
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.findMacroByName
+                end
+            },
+        level)
+    elseif menu == "globalLoadoutOptions" then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Automatically apply Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.applyLoadout = not ImprovedTalentLoadoutsDB.options.applyLoadout
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.applyLoadout
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Add Loadouts to /simc",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.simc = not ImprovedTalentLoadoutsDB.options.simc
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.simc
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Blizzard Loadouts (yellow)",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                tooltipOnButton = 1,
+                tooltipTitle = "Load Blizzard Loadouts",
+                tooltipText = "Load the yellow loadouts (if they exists) with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn for the yellow loadouts.",
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadBlizzard
+                end 
+            },
+        level)
     elseif menu == "specButtonType" then
         local buttonTypes = {"text", "icon"}
         local buttonTypesText = {"Text", "Icons"}
