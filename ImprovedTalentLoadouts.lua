@@ -63,6 +63,20 @@ local defaultDB = {
     }
 }
 
+local hooks = {}
+local function HookFunction(namespace, key, func)
+    hooksecurefunc(namespace, key, function()
+        if hooks[key] then
+            func()
+        end
+    end)
+    hooks[key] = true
+end
+
+local function UnhookFunction(key)
+    hooks[key] = nil
+end
+
 local RegisterEvent, UnregisterEvent
 do
     local eventFrame = CreateFrame("Frame")
@@ -78,10 +92,13 @@ do
     RegisterEvent("PLAYER_ENTERING_WORLD")
     RegisterEvent("TRAIT_CONFIG_UPDATED")
     RegisterEvent("TRAIT_CONFIG_CREATED")
+    RegisterEvent("PLAYER_REGEN_ENABLED")
+    RegisterEvent("PLAYER_REGEN_DISABLED")
+    RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     RegisterEvent("UPDATE_MACROS")
     RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     RegisterEvent("EQUIPMENT_SWAP_FINISHED")
-    eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
+    eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
                 TalentLoadouts:Initialize()
@@ -97,6 +114,10 @@ do
             TalentLoadouts:InitializeCharacterDB()
             TalentLoadouts:SaveCurrentLoadouts()
             TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+        elseif event == "PLAYER_REGEN_DISABLED" then
+            UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
         elseif event == "TRAIT_CONFIG_UPDATED" then
             TalentLoadouts:UpdateConfig(arg1)
             TalentLoadouts.pendingLoadout = nil
@@ -110,7 +131,16 @@ do
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
-        elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" then
+        elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" or event == "CONFIG_COMMIT_FAILED" then
+            if TalentLoadouts.pendingLoadout and not UnitCastingInfo("player") then
+                TalentLoadouts:OnLoadoutFail(event)
+            end
+        elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg3 == Constants.TraitConsts.COMMIT_COMBAT_TRAIT_CONFIG_CHANGES_SPELL_ID then
+            if TalentLoadouts.pendingLoadout then
+                TalentLoadouts:OnLoadoutSuccess()
+            else
+                TalentLoadouts:OnUnknownLoadoutSuccess()
+            end
         elseif event == "EQUIPMENT_SWAP_FINISHED" and not arg1 then
             local name = C_EquipmentSet.GetEquipmentSetInfo(arg2)
             TalentLoadouts:Print("Equipment swap failed:", name)
@@ -459,15 +489,43 @@ local function LoadLoadout(self, configInfo, categoryInfo)
         end
     end
 
+    TalentLoadouts.pendingLoadout = configInfo
+    TalentLoadouts.pendingCategory = categoryInfo
+    RegisterEvent("CONFIG_COMMIT_FAILED")
+    RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+
+    TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj()
+
     local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
     if not canChange then 
         if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
             configInfo.error = true
         end
 
+        HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
         TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
         return 
     end
+
+    if ImprovedTalentLoadoutsDB.options.applyLoadout then
+        C_ClassTalents.SaveConfig(configInfo.ID)
+        C_ClassTalents.CommitConfig(configInfo.ID)
+    else
+        HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
+    end
+
+    if not C_Traits.ConfigHasStagedChanges(activeConfigID) then
+        TalentLoadouts:OnLoadoutSuccess()
+    end
+
+    configInfo.error = nil
+    LibDD:CloseDropDownMenus()
+end
+
+function TalentLoadouts:OnLoadoutSuccess()
+    local configInfo = TalentLoadouts.pendingLoadout
+    local categoryInfo = TalentLoadouts.pendingCategory
 
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         TalentLoadouts:LoadActionBar(configInfo.actionBars)
@@ -475,28 +533,43 @@ local function LoadLoadout(self, configInfo, categoryInfo)
 
     TalentLoadouts:LoadGearAndLayout(configInfo)
 
-    if ImprovedTalentLoadoutsDB.options.applyLoadout then
-        TalentLoadouts.pendingLoadout = nil
-        C_ClassTalents.SaveConfig(configInfo.ID)
-        C_ClassTalents.CommitConfig(configInfo.ID)
-        TalentLoadouts.charDB.lastLoadout = configInfo.ID
-        TalentLoadouts.charDB.lastCategory = categoryInfo
-        TalentLoadouts:UpdateDropdownText()
-        TalentLoadouts:UpdateDataObj(configInfo)
-        C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
-        ClassTalentFrame.TalentsTab.LoadoutDropDown:ClearSelection()
-    else
-        TalentLoadouts.currentLoadout = TalentLoadouts.charDB.lastLoadout
-        TalentLoadouts.charDB.lastLoadout = configInfo.ID
-        TalentLoadouts.charDB.lastCategory = categoryInfo
-        TalentLoadouts:UpdateDropdownText()
-        TalentLoadouts:UpdateDataObj()
-        TalentLoadouts.pendingLoadout = configInfo
-        --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+    TalentLoadouts.charDB.lastLoadout = configInfo.ID
+    TalentLoadouts.charDB[self.specID] = configInfo.ID
+    TalentLoadouts.charDB.lastCategory = categoryInfo
+    TalentLoadouts.pendingLoadout = nil
+    TalentLoadouts.pendingCategory = nil
+
+    TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj(configInfo)
+
+    UnhookFunction("RollbackConfig")
+    UnregisterEvent("CONFIG_COMMIT_FAILED")
+    UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+end
+
+function TalentLoadouts:OnUnknownLoadoutSuccess()
+    TalentLoadouts.charDB.lastLoadout = nil
+    TalentLoadouts.charDB[self.specID] = nil
+    TalentLoadouts.charDB.lastCategory = nil
+
+    TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj()
+end
+
+function TalentLoadouts:OnLoadoutFail(event)
+    TalentLoadouts.pendingLoadout = nil
+    TalentLoadouts.pendingCategory = nil
+
+    UnhookFunction("RollbackConfig")
+    UnregisterEvent("CONFIG_COMMIT_FAILED")
+    UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+
+    if event == "CONFIG_COMMIT_FAILED" then
+        C_Traits.RollbackConfig(C_ClassTalents.GetActiveConfigID())
     end
 
-    configInfo.error = nil
-    LibDD:CloseDropDownMenus()
+    TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj()
 end
 
 local function FindFreeConfigID()
@@ -628,7 +701,9 @@ function TalentLoadouts:ImportCategory(data, isSubCategory, parentKey)
 
     for _, configInfo in ipairs(data) do
         local configID = TalentLoadouts:ImportLoadout(configInfo.exportString, configInfo.name, data.key)
-        tinsert(categoryInfo.loadouts, configID)
+        if configID then
+            tinsert(categoryInfo.loadouts, configID)
+        end
     end
 
     return data.key
@@ -1959,8 +2034,16 @@ function TalentLoadouts:UpdateDropdownText()
     local currentSpecID = self.specID
     local dropdownText = ""
 
-    local configInfo = self.charDB.lastLoadout and self.globalDB.configIDs[currentSpecID][self.charDB.lastLoadout]
-    dropdownText = configInfo and configInfo.name or "Unknown"
+    local color, configInfo = "FFFFFF", nil
+    if self.pendingLoadout then
+        color = "F5B042"
+        configInfo = self.pendingLoadout
+    elseif self.charDB[currentSpecID] then
+        configInfo = self.globalDB.configIDs[currentSpecID][self.charDB[currentSpecID]]
+    elseif self.charDB.lastLoadout then 
+        configInfo = self.globalDB.configIDs[currentSpecID][self.charDB.lastLoadout]
+    end
+    dropdownText = string.format("|cFF%s%s|r", color, configInfo and configInfo.name or "Unknown")
 
     if self.charDB.lastCategory and ImprovedTalentLoadoutsDB.options.showCategoryName then
         dropdownText = string.format("|cFF34ebe1[%s]|r %s", self.charDB.lastCategory.name, dropdownText)
