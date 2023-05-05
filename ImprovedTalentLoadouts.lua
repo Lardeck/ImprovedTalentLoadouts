@@ -408,6 +408,8 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
 end
 
 local function LoadLoadout(self, configInfo, categoryInfo)
+    if not configInfo then return end
+
     local currentSpecID = TalentLoadouts.specID
     local configID = configInfo.ID
 
@@ -415,6 +417,7 @@ local function LoadLoadout(self, configInfo, categoryInfo)
         C_ClassTalents.LoadConfig(configID, true)
         C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
         TalentLoadouts.charDB.lastLoadout = configInfo.ID
+        TalentLoadouts.charDB[currentSpecID] = configInfo.ID
         TalentLoadouts.charDB.lastCategory = categoryInfo
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj(configInfo)
