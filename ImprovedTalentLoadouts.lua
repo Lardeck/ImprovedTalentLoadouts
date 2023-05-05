@@ -1028,10 +1028,11 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
     text = "Loadout Import String",
     button1 = "Import",
     button2 = "Cancel",
-    OnAccept = function(self)
+    OnAccept = function(self, apply)
        local importString = self.editBox:GetText()
        local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
        dialog.data = importString
+       dialog.data2 = apply
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -1048,9 +1049,12 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     text = "Loadout Import Name",
     button1 = "Import",
     button2 = "Cancel",
-    OnAccept = function(self, importString)
-       local loadoutName = self.editBox:GetText()
-       TalentLoadouts:ImportLoadout(importString, loadoutName)
+    OnAccept = function(self, importString, apply)
+        local loadoutName = self.editBox:GetText()
+        local fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName)
+        if fakeConfigID and apply then
+            LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][fakeConfigID])
+        end
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -1063,8 +1067,9 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     hideOnEscape = true,
 }
 
-local function ImportCustomLoadout()
-    StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
+local function ImportCustomLoadout(self, apply)
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
+    dialog.data = apply
 end
 
 function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
@@ -1089,6 +1094,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
         }
     else
         self:Print("Invalid import string.")
+        return
     end
 
     return fakeConfigID
@@ -1460,10 +1466,11 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
         LibDD:UIDropDownMenu_AddButton(
             {
                 text = "Import Loadout + Apply",
+                arg1 = true,
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = ImportCustomLoadoutAndApply,
+                func = ImportCustomLoadout,
             },
         level)
 
