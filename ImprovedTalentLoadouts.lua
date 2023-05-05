@@ -791,10 +791,10 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     text = "Loadout Name",
     button1 = "Save",
     button2 = "Cancel",
-    OnAccept = function(self, saveType)
+    OnAccept = function(self, saveType, apply)
         local loadoutName = self.editBox:GetText()
         if saveType == 1 then
-            TalentLoadouts:SaveCurrentLoadout(loadoutName)
+            TalentLoadouts:SaveCurrentLoadout(loadoutName, nil, apply)
         elseif saveType == 2 then
             TalentLoadouts:SaveCurrentClassTree(loadoutName)
         elseif saveType == 3 then
@@ -812,9 +812,10 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     hideOnEscape = true,
  }
 
- local function SaveCurrentLoadout()
+ local function SaveCurrentLoadout(self, apply)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
     dialog.data = 1
+    dialog.data2 = apply
  end
 
  local function SaveCurrentClassTree()
@@ -827,7 +828,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     dialog.data = 3
  end
 
- function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID)
+ function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID, apply)
     local currentSpecID = self.specID
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     local fakeConfigID = FindFreeConfigID()
@@ -852,13 +853,19 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         self:InitializeTalentLoadout(fakeConfigID, exportString)
     end
 
-    if currencyID then
-        self.charDB.lastClassLoadout = fakeConfigID
-    else
-        self.charDB.lastLoadout = fakeConfigID
+    if not C_Traits.ConfigHasStagedChanges(activeConfigID) then
+        if currencyID then
+            self.charDB.lastClassLoadout = fakeConfigID
+        else
+            self.charDB.lastLoadout = fakeConfigID
+            self.charDB[currentSpecID] = fakeConfigID
+        end
+
+        TalentLoadouts:UpdateDropdownText()
+        TalentLoadouts:UpdateDataObj(self.globalDB.configIDs[currentSpecID][fakeConfigID])
+    elseif apply then
+        LoadLoadout(nil, configInfo)
     end
-    TalentLoadouts:UpdateDropdownText()
-    TalentLoadouts:UpdateDataObj(self.globalDB.configIDs[currentSpecID][fakeConfigID])
  end
 
  function TalentLoadouts:SaveCurrentClassTree(loadoutName)
