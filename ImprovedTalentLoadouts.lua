@@ -131,6 +131,7 @@ do
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
+            TalentLoadouts:UpdateIterator()
         elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" or event == "CONFIG_COMMIT_FAILED" then
             if TalentLoadouts.pendingLoadout and not UnitCastingInfo("player") then
                 TalentLoadouts:OnLoadoutFail(event)
