@@ -136,7 +136,7 @@ do
             if TalentLoadouts.pendingLoadout and not UnitCastingInfo("player") then
                 TalentLoadouts:OnLoadoutFail(event)
             end
-        elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg3 == Constants.TraitConsts.COMMIT_COMBAT_TRAIT_CONFIG_CHANGES_SPELL_ID then
+        elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" and arg3 == Constants.TraitConsts.COMMIT_COMBAT_TRAIT_CONFIG_CHANGES_SPELL_ID then
             if TalentLoadouts.pendingLoadout then
                 TalentLoadouts:OnLoadoutSuccess()
             else
