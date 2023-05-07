@@ -427,7 +427,7 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
 
     if not inCombat then
         if configInfo.gearset then
-            EquipmentManager_EquipSet(configInfo.gearset)
+            C_Timer.After(0, function() EquipmentManager_EquipSet(configInfo.gearset) end)
         end
 
         if configInfo.layout then
