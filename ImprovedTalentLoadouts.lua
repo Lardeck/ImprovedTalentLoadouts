@@ -1491,6 +1491,10 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
     local currentSpecID = TalentLoadouts.specID
     if level == 1 then
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
+        TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
+        TalentLoadouts:UpdateIterator()
+
+        
         for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], sortByName) do
             if not categoryInfo.isSubCategory then
                 LibDD:UIDropDownMenu_AddButton(
@@ -1508,8 +1512,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             end
         end
 
-        TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
-        TalentLoadouts:UpdateIterator()
+
         for configID, configInfo in iterateLoadouts() do
             if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
                 local color = (configInfo.error and "|cFFFF0000") or (configInfo.fake and "|cFF33ff96") or "|cFFFFD100"
