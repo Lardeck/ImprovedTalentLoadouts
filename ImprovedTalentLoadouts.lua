@@ -98,6 +98,7 @@ do
     RegisterEvent("UPDATE_MACROS")
     RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     RegisterEvent("EQUIPMENT_SWAP_FINISHED")
+    RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
@@ -133,7 +134,7 @@ do
             TalentLoadouts:UpdateDataObj()
             TalentLoadouts:UpdateIterator()
         elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" or event == "CONFIG_COMMIT_FAILED" then
-            if TalentLoadouts.pendingLoadout and not UnitCastingInfo("player") then
+            if (TalentLoadouts.pendingLoadout and not UnitCastingInfo("player")) or TalentLoadouts.lastUpdated then
                 TalentLoadouts:OnLoadoutFail(event)
             end
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" and arg3 == Constants.TraitConsts.COMMIT_COMBAT_TRAIT_CONFIG_CHANGES_SPELL_ID then
@@ -280,9 +281,9 @@ end
 
 function TalentLoadouts:UpdateIterator()
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
-        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[self.specID], sortByName)
+        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[self.specID] or {}, sortByName)
     else
-        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[self.specID])
+        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[self.specID] or {})
     end
 end
 
@@ -492,6 +493,8 @@ local function LoadLoadout(self, configInfo, categoryInfo)
 
     TalentLoadouts.pendingLoadout = configInfo
     TalentLoadouts.pendingCategory = categoryInfo
+    TalentLoadouts.lastUpdated = nil
+    TalentLoadouts.lastUpdatedCategory = nil
     RegisterEvent("CONFIG_COMMIT_FAILED")
     RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
 
@@ -549,9 +552,23 @@ function TalentLoadouts:OnLoadoutSuccess()
 end
 
 function TalentLoadouts:OnUnknownLoadoutSuccess()
-    TalentLoadouts.charDB.lastLoadout = nil
-    TalentLoadouts.charDB[self.specID] = nil
-    TalentLoadouts.charDB.lastCategory = nil
+    local known = false
+    if TalentLoadouts.lastUpdated then
+        local configInfo = TalentLoadouts.lastUpdated
+        local exportString = CreateExportString(configInfo, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+        if exportString == configInfo.exportString then
+            TalentLoadouts.charDB.lastLoadout = configInfo.ID
+            TalentLoadouts.charDB[self.specID] = configInfo.ID
+            TalentLoadouts.charDB.lastCategory = TalentLoadouts.lastUpdatedCategory
+            known = true
+        end
+    end
+
+    if not known then
+        TalentLoadouts.charDB.lastLoadout = nil
+        TalentLoadouts.charDB[self.specID] = nil
+        TalentLoadouts.charDB.lastCategory = nil
+    end
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
@@ -560,10 +577,12 @@ end
 function TalentLoadouts:OnLoadoutFail(event)
     TalentLoadouts.pendingLoadout = nil
     TalentLoadouts.pendingCategory = nil
+    TalentLoadouts.lastUpdated = nil
+    TalentLoadouts.lastUpdatedCategory = nil
 
     UnhookFunction("RollbackConfig")
-    UnregisterEvent("CONFIG_COMMIT_FAILED")
     UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+    UnregisterEvent("CONFIG_COMMIT_FAILED")
 
     if event == "CONFIG_COMMIT_FAILED" then
         C_Traits.RollbackConfig(C_ClassTalents.GetActiveConfigID())
@@ -971,7 +990,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     end
  end
 
- local function UpdateWithCurrentTree(self, configID)
+ local function UpdateWithCurrentTree(self, configID, categoryInfo, isButtonUpdate)
     if configID then
         local currentSpecID = TalentLoadouts.specID
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
@@ -981,6 +1000,11 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
             configInfo.error = nil
 
             TalentLoadouts:Print(configInfo.name, "updated")
+
+            if isButtonUpdate then
+                TalentLoadouts.lastUpdated = configInfo
+                TalentLoadouts.lastUpdatedCategory = categoryInfo
+            end
         end
     end
  end
@@ -1484,7 +1508,8 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             end
         end
 
-
+        TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
+        TalentLoadouts:UpdateIterator()
         for configID, configInfo in iterateLoadouts() do
             if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
                 local color = (configInfo.error and "|cFFFF0000") or (configInfo.fake and "|cFF33ff96") or "|cFFFFD100"
@@ -2233,7 +2258,7 @@ function TalentLoadouts:InitializeButtons()
 
     saveButton:SetScript("OnClick", function()
         if IsShiftKeyDown() then
-            UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout)
+            UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout, TalentLoadouts.charDB.lastCategory, true)
         end
     end)
 
