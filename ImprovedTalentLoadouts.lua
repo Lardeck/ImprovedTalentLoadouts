@@ -44,6 +44,32 @@ local function spairs(t, order)
     end
 end
 
+-- Adapted from https://github.com/philanc/plc/blob/master/plc/checksum.lua
+local function adler32(s)
+  -- return adler32 checksum  (uint32)
+  -- adler32 is a checksum defined by Mark Adler for zlib
+  -- (based on the Fletcher checksum used in ITU X.224)
+  -- implementation based on RFC 1950 (zlib format spec), 1996
+  local prime = 65521 --largest prime smaller than 2^16
+  local s1, s2 = 1, 0
+
+  -- limit s size to ensure that modulo prime can be done only at end
+  -- 2^40 is too large for WoW Lua so limit to 2^30
+  if #s > (bit.lshift(1, 30)) then error("adler32: string too large") end
+
+  for i = 1,#s do
+    local b = string.byte(s, i)
+    s1 = s1 + b
+    s2 = s2 + s1
+    -- no need to test or compute mod prime every turn.
+  end
+
+  s1 = s1 % prime
+  s2 = s2 % prime
+
+  return (bit.lshift(s2, 16)) + s1
+end --adler32()
+
 local function sortByName(t, a, b)
     if t[a] and t[b] and t[a].name and t[b].name then
         return t[a].name < t[b].name
@@ -2135,30 +2161,40 @@ function TalentLoadouts:InitializeHooks()
         end
         
         if customLoadouts and SimcEditBox then
-           local hooked = true
-           local text = SimcEditBox:GetText()
+            local hooked = true
+            local text = SimcEditBox:GetText()
+ 
+            local outputHeader = "\n\n# From ImprovedTalentLoadouts\n#"
+            customLoadouts = outputHeader .. customLoadouts
+ 
+            SimcEditBox:SetCursorPosition(SimcEditBox:GetNumLetters())
+            SimcEditBox:HighlightText(0,0)
+            SimcEditBox:Insert(customLoadouts)
+            SimcEditBox:HighlightText()
+            SimcEditBox:SetFocus()
+            SimcEditBox:HookScript("OnTextChanged", function(self) 
+                  if hooked then
+                     local outText                        
+                     local checkStart = string.find(text, '\n# Checksum: ', 500, true)            
+                     if checkStart then                
+                        outText = string.sub(text, 1, checkStart - 1) .. customLoadouts .. '\n\n'                 
+                        local checksum = adler32(outText)
+                        outText = outText .. '# Checksum: ' .. string.format('%x', checksum)
+                     else
+                        outText = text .. customLoadouts
+                     end
 
-           local outputHeader = "\n\n# From ImprovedTalentLoadouts\n#"
-           customLoadouts = outputHeader .. customLoadouts
-
-           SimcEditBox:SetCursorPosition(SimcEditBox:GetNumLetters())
-           SimcEditBox:HighlightText(0,0)
-           SimcEditBox:Insert(customLoadouts)
-           SimcEditBox:HighlightText()
-           SimcEditBox:SetFocus()
-           SimcEditBox:HookScript("OnTextChanged", function(self) 
-                 if hooked then
-                    self:SetText(text .. customLoadouts)
-                    self:HighlightText()
-                 end
-           end)
-           
-           SimcEditBox:HookScript("OnHide", function(self)
-                 hooked = false
-           end)
-        end
-  end)
-end
+                     self:SetText(outText or "ImprovedTalentLoadouts Error")
+                     self:HighlightText()
+                  end
+            end)
+            
+            SimcEditBox:HookScript("OnHide", function(self)
+                  hooked = false
+            end)
+         end
+   end)
+ end
 
 function TalentLoadouts:InitializeDropdown()
     local dropdown = LibDD:Create_UIDropDownMenu("TestDropdownMenu", ClassTalentFrame.TalentsTab)
