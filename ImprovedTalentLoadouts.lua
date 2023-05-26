@@ -2381,3 +2381,14 @@ function TalentLoadouts:UpdateMacros()
     --backwards compatibility
     self.charMacros = self.characterMacros
 end
+
+SLASH_IMPROVEDTALENDLOADOUTS1 = '/itl'
+SlashCmdList["IMPROVEDTALENDLOADOUTS"] = function(msg, editbox)
+    if msg == 'saveActionbar' then
+        local currentSpecID = TalentLoadouts.specID
+        local configID = TalentLoadouts.charDB[currentSpecID]
+        if configID then
+            UpdateActionBars(nil, configID)
+        end
+    end
+end
