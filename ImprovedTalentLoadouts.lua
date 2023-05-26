@@ -129,6 +129,7 @@ do
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
             TalentLoadouts.charDB.lastCategory = nil
             TalentLoadouts:UpdateSpecID(true)
+            TalentLoadouts:UpdateActionBar()
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
@@ -231,7 +232,8 @@ function TalentLoadouts:CheckForDBUpdates()
         ["findMacroByName"] = false,
         ["loadBlizzard"] = false,
         ["showCategoryName"] = false,
-        ["sortLoadoutsByName"] = false
+        ["sortLoadoutsByName"] = false,
+        ["loadActionbarsSpec"] = false,
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -279,6 +281,16 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     end
 end
 
+function TalentLoadouts:UpdateActionBar()
+    if not ImprovedTalentLoadoutsDB.options.loadActionbarsSpec then return end
+
+    local currentSpecID = self.specID
+    local configInfo = self.globalDB.configIDs[currentSpecID][self.charDB[currentSpecID]]
+    if configInfo and configInfo.actionBars then
+        self:LoadActionBar(configInfo.actionBars)
+    end
+end
+
 function TalentLoadouts:UpdateIterator()
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
         iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[self.specID] or {}, sortByName)
@@ -287,14 +299,18 @@ function TalentLoadouts:UpdateIterator()
     end
 end
 
-local function CreateEntryInfoFromString(configID, exportString, treeID)
+local function CreateEntryInfoFromString(configID, exportString, treeID, repeating)
     configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
+    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
     local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, configID, treeID, loadoutContent)
+    -- TalentLoadouts:Print(success, loadoutEntryInfo and #loadoutEntryInfo)
     if success then
         return loadoutEntryInfo
+    elseif not repeating then
+        return CreateEntryInfoFromString(configID, exportString, treeID, true)
     end
 end
 
@@ -1739,6 +1755,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.loadActionbars
+                end
+            },
+        level)
+
+                LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load Action Bars with Spec",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadActionbarsSpec = not ImprovedTalentLoadoutsDB.options.loadActionbarsSpec
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadActionbarsSpec
                 end
             },
         level)
