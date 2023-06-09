@@ -304,6 +304,7 @@ function TalentLoadouts:UpdateIterator()
     end
 end
 
+-- WIP, Wasn't able to reproduce the issue of empty loadout info
 local function CreateEntryInfoFromString(configID, exportString, treeID, repeating)
     configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
     local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
@@ -312,10 +313,12 @@ local function CreateEntryInfoFromString(configID, exportString, treeID, repeati
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
     local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, configID, treeID, loadoutContent)
     -- TalentLoadouts:Print(success, loadoutEntryInfo and #loadoutEntryInfo)
-    if success then
+    if success and #loadoutEntryInfo > 0 then
         return loadoutEntryInfo
     elseif not repeating then
         return CreateEntryInfoFromString(configID, exportString, treeID, true)
+    else
+        TalentLoadouts:Print("Wasn't able to import the loadout. Try reloading or restarting your game.")
     end
 end
 
