@@ -2282,7 +2282,8 @@ function TalentLoadouts:InitializeButtons()
     saveButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(saveButton, "ANCHOR_TOP")
         GameTooltip:AddLine("Update the active loadout with the current tree.")
-        GameTooltip:AddLine("The button will only work while you're holding down SHIFT")
+        GameTooltip:AddLine("Hold down SHIFT to update the loadout")
+        GameTooltip:AddLine("Hold down CTRL to update the loadout + action bars")
         GameTooltip:Show()
     end)
     
@@ -2293,6 +2294,9 @@ function TalentLoadouts:InitializeButtons()
     saveButton:SetScript("OnClick", function()
         if IsShiftKeyDown() then
             UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout, TalentLoadouts.charDB.lastCategory, true)
+        elseif IsControlKeyDown() then
+            UpdateWithCurrentTree(nil, TalentLoadouts.charDB.lastLoadout, TalentLoadouts.charDB.lastCategory, true)
+            UpdateActionBars(nil, TalentLoadouts.charDB.lastLoadout)
         end
     end)
 
