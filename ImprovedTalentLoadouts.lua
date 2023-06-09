@@ -287,7 +287,12 @@ function TalentLoadouts:UpdateActionBar()
     local currentSpecID = self.specID
     local configInfo = self.globalDB.configIDs[currentSpecID][self.charDB[currentSpecID]]
     if configInfo and configInfo.actionBars then
-        self:LoadActionBar(configInfo.actionBars)
+        -- Players are reporting that it sometimes doesn't work after changing the specialization. As I can't reproduce I will add a small delay for now, maybe that fixes it.
+        C_Timer.After(0.1, function()
+            self:LoadActionBar(configInfo.actionBars)
+        end)
+    else
+        self:Print("Couldn't find the last loadout of the spec. Make sure that the dropdown doesn't say \"Unknown\". This means that you've changed the tree without updating a loadout.")
     end
 end
 
@@ -1296,9 +1301,11 @@ function TalentLoadouts:UpdateActionBars(configInfo)
         end
     end
 
-    local serialized = LibSerialize:Serialize(actionBars)
-    local compressed = LibDeflate:CompressDeflate(serialized)
-    configInfo.actionBars = compressed
+    if next(actionBars) then
+        local serialized = LibSerialize:Serialize(actionBars)
+        local compressed = LibDeflate:CompressDeflate(serialized)
+        configInfo.actionBars = compressed
+    end
 end
 
 local function LoadActionBar(self, configID)
@@ -1319,13 +1326,15 @@ function TalentLoadouts:LoadActionBar(actionBars)
 
     self:UpdateMacros()
 
+    if not next(data) then return end
+
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
         if slotInfo then
             local pickedUp = false
             ClearCursor()
-            if slotInfo.type == "spell" then
+            if slotInfo.type == "spell" and currentType ~= slotInfo.type and currentID ~= slotInfo.id then
                 PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
@@ -1334,7 +1343,7 @@ function TalentLoadouts:LoadActionBar(actionBars)
                     if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
-                    if id then
+                    if id and currentType ~= slotInfo.type and currentID ~= id then
                         PickupMacro(id)
                         pickedUp = true
                     else
