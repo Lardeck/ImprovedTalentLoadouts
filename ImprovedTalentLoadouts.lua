@@ -1337,7 +1337,7 @@ function TalentLoadouts:LoadActionBar(actionBars)
         if slotInfo then
             local pickedUp = false
             ClearCursor()
-            if slotInfo.type == "spell" and currentType ~= slotInfo.type and currentID ~= slotInfo.id then
+            if slotInfo.type == "spell" and slotInfo.type ~= currentType and currentID ~= slotInfo.id then
                 PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
@@ -1346,7 +1346,7 @@ function TalentLoadouts:LoadActionBar(actionBars)
                     if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
-                    if id and currentType ~= slotInfo.type and currentID ~= id then
+                    if id and slotInfo.type ~= currentType and currentID ~= id then
                         PickupMacro(id)
                         pickedUp = true
                     else
