@@ -1335,9 +1335,10 @@ function TalentLoadouts:LoadActionBar(actionBars)
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
         if slotInfo then
+
             local pickedUp = false
             ClearCursor()
-            if slotInfo.type == "spell" and slotInfo.type ~= currentType and currentID ~= slotInfo.id then
+            if slotInfo.type == "spell" and slotInfo.id ~= currentID then
                 PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
@@ -1346,10 +1347,11 @@ function TalentLoadouts:LoadActionBar(actionBars)
                     if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
-                    if id and slotInfo.type ~= currentType and currentID ~= id then
+
+                    if id and id ~= currentID then
                         PickupMacro(id)
                         pickedUp = true
-                    else
+                    elseif not id then
                         self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, (slotInfo.body or ""):gsub("\n", " "))
                     end
                 end
