@@ -537,7 +537,6 @@ local function LoadLoadout(self, configInfo, categoryInfo)
     end
 
     if ImprovedTalentLoadoutsDB.options.applyLoadout then
-        C_ClassTalents.SaveConfig(configInfo.ID)
         C_ClassTalents.CommitConfig(configInfo.ID)
     else
         HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
