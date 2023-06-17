@@ -289,7 +289,7 @@ function TalentLoadouts:UpdateActionBar()
     if configInfo and configInfo.actionBars then
         -- Players are reporting that it sometimes doesn't work after changing the specialization. As I can't reproduce I will add a small delay for now, maybe that fixes it.
         C_Timer.After(0.1, function()
-            self:LoadActionBar(configInfo.actionBars)
+            self:LoadActionBar(configInfo.actionBars, configInfo.name)
         end)
     else
         self:Print("Couldn't find the last loadout of the spec. Make sure that the dropdown doesn't say \"Unknown\". This means that you've changed the tree without updating a loadout.")
@@ -555,7 +555,7 @@ function TalentLoadouts:OnLoadoutSuccess()
     local categoryInfo = TalentLoadouts.pendingCategory
 
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
-        TalentLoadouts:LoadActionBar(configInfo.actionBars)
+        TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
     end
 
     TalentLoadouts:LoadGearAndLayout(configInfo)
@@ -1314,11 +1314,11 @@ local function LoadActionBar(self, configID)
     local currentSpecID = TalentLoadouts.specID
     local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
     if configInfo and configInfo.actionBars then
-        TalentLoadouts:LoadActionBar(configInfo.actionBars)
+        TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
     end
 end
 
-function TalentLoadouts:LoadActionBar(actionBars)
+function TalentLoadouts:LoadActionBar(actionBars, name)
     if not actionBars then return end
 
     local decompressed = LibDeflate:DecompressDeflate(actionBars)
@@ -1329,6 +1329,10 @@ function TalentLoadouts:LoadActionBar(actionBars)
     self:UpdateMacros()
 
     if not next(data) then return end
+
+    if name then
+        self:Print("Loading action bars of", name)
+    end
 
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local slotInfo = data[actionSlot]
