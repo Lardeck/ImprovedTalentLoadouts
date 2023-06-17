@@ -6,6 +6,7 @@ local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 local internalVersion = 6
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
+local IPL_LOADOUT_NAME = "[ITL] Temp"
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local dataObjText = "ITL: %s, %s"
@@ -91,7 +92,6 @@ do
     RegisterEvent("ADDON_LOADED")
     RegisterEvent("PLAYER_ENTERING_WORLD")
     RegisterEvent("TRAIT_CONFIG_UPDATED")
-    RegisterEvent("TRAIT_CONFIG_CREATED")
     RegisterEvent("PLAYER_REGEN_ENABLED")
     RegisterEvent("PLAYER_REGEN_DISABLED")
     RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
@@ -115,15 +115,21 @@ do
             TalentLoadouts:InitializeCharacterDB()
             TalentLoadouts:SaveCurrentLoadouts()
             TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
+            TalentLoadouts:DeleteTempLoadouts()
         elseif event == "PLAYER_REGEN_ENABLED" then
             RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
         elseif event == "PLAYER_REGEN_DISABLED" then
             UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
         elseif event == "TRAIT_CONFIG_UPDATED" then
             TalentLoadouts:UpdateConfig(arg1)
-            TalentLoadouts.pendingLoadout = nil
-        elseif event == "TRAIT_CONFIG_CREATED" then
-            TalentLoadouts:UpdateConfig(arg1.ID)
+
+            if not TalentLoadouts.blizzImported then
+                TalentLoadouts.pendingLoadout = nil
+            end
+
+            if TalentLoadouts.pendingDeletion then
+                TalentLoadouts:DeleteTempLoadouts()
+            end
         elseif event == "UPDATE_MACROS" then
             TalentLoadouts:UpdateMacros()
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
@@ -234,6 +240,7 @@ function TalentLoadouts:CheckForDBUpdates()
         ["showCategoryName"] = false,
         ["sortLoadoutsByName"] = false,
         ["loadActionbarsSpec"] = false,
+        ["loadAsBlizzard"] = false,
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -392,7 +399,6 @@ function TalentLoadouts:UpdateConfig(configID)
         local newConfigInfo = C_Traits.GetConfigInfo(configID)
         configInfo.exportString, configInfo.entryInfo = CreateExportString(configInfo, configID, currentSpecID)
         configInfo.name = newConfigInfo and newConfigInfo.name or configInfo.name
-        configInfo.usesSharedActionBars = newConfigInfo.usesSharedActionBars
     else
         self:SaveLoadout(configID, currentSpecID)
     end
@@ -401,12 +407,33 @@ end
 function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     local specLoadouts = self.globalDB.configIDs[currentSpecID]
     local configInfo = C_Traits.GetConfigInfo(configID)
-    if configInfo.type == 1 then
+    if configInfo.type == 1 and configInfo.name ~= IPL_LOADOUT_NAME then
         configInfo.default = configID == C_ClassTalents.GetActiveConfigID() or nil
         specLoadouts[configID] = configInfo
         self:InitializeTalentLoadout(configID)
     end
 end
+
+function TalentLoadouts:DeleteTempLoadouts()
+    local specID = self.specID
+    local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
+
+    for _, configID in ipairs(configIDs) do
+        local configInfo = C_Traits.GetConfigInfo(configID)
+        if configInfo.name == IPL_LOADOUT_NAME then
+            C_ClassTalents.DeleteConfig(configID)
+        end
+    end
+
+    C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
+
+    if ClassTalentFrame then
+        securecall(ClassTalentFrame.TalentsTab.LoadoutDropDown.ClearSelection, ClassTalentFrame.TalentsTab.LoadoutDropDown)
+    end
+
+    self.pendingDeletion = nil
+end
+
 
 function TalentLoadouts:GetExportStringForTree(skipEntryInfo)
     return CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, skipEntryInfo)
@@ -463,6 +490,7 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
     end
 end
 
+-- TODO: Refactor in the next version
 local function LoadLoadout(self, configInfo, categoryInfo)
     if not configInfo then return end
 
@@ -484,65 +512,89 @@ local function LoadLoadout(self, configInfo, categoryInfo)
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     local treeID = configInfo.treeIDs[1]
 
-    if configInfo.currencyID then
-        securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
-    else
-        C_Traits.ResetTree(activeConfigID, treeID)
-    end
+    if ImprovedTalentLoadoutsDB.options.loadAsBlizzard then
+        local configIDs = C_ClassTalents.GetConfigIDsBySpecID(currentSpecID)
+        if #configIDs < 10 and TalentLoadouts.charDB.lastLoadout ~= configInfo.ID then
+            TalentLoadouts.pendingLoadout = configInfo
+            TalentLoadouts.pendingCategory = categoryInfo
+            TalentLoadouts.lastUpdated = nil
+            TalentLoadouts.lastUpdatedCategory = nil
+            
+            RegisterEvent("CONFIG_COMMIT_FAILED")
+            RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+        
+            TalentLoadouts:UpdateDropdownText()
+            TalentLoadouts:UpdateDataObj()
 
-    local entryInfo = configInfo.entryInfo
-    table.sort(entryInfo, function(a, b)
-        local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
-        local nodeB = C_Traits.GetNodeInfo(activeConfigID, b.nodeID)
-
-        return nodeA.posY < nodeB.posY or (nodeA.posY == nodeB.posY and nodeA.posX < nodeB.posX)
-    end)
-
-
-    for i=1, #entryInfo do
-        local entry = entryInfo[i]
-        local nodeInfo = C_Traits.GetNodeInfo(activeConfigID, entry.nodeID)
-        if nodeInfo.isAvailable and nodeInfo.isVisible then
-            if nodeInfo.type == Enum.TraitNodeType.Selection then
-                C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
+            TalentLoadouts.blizzImported = true
+            local success = securecall(ClassTalentFrame.TalentsTab.ImportLoadout, ClassTalentFrame.TalentsTab, configInfo.exportString, IPL_LOADOUT_NAME)
+            if not success then
+                configInfo.error = true
+                HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
+                return
             end
-
-            if C_Traits.CanPurchaseRank(activeConfigID, entry.nodeID, entry.selectionEntryID) then
-                for rank=1, entry.ranksPurchased do
-                    C_Traits.PurchaseRank(activeConfigID, entry.nodeID)
+        end
+    else
+        if configInfo.currencyID then
+            securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
+        else
+            C_Traits.ResetTree(activeConfigID, treeID)
+        end
+    
+        local entryInfo = configInfo.entryInfo
+        table.sort(entryInfo, function(a, b)
+            local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
+            local nodeB = C_Traits.GetNodeInfo(activeConfigID, b.nodeID)
+    
+            return nodeA.posY < nodeB.posY or (nodeA.posY == nodeB.posY and nodeA.posX < nodeB.posX)
+        end)
+    
+        for i=1, #entryInfo do
+            local entry = entryInfo[i]
+            local nodeInfo = C_Traits.GetNodeInfo(activeConfigID, entry.nodeID)
+            if nodeInfo.isAvailable and nodeInfo.isVisible then
+                if nodeInfo.type == Enum.TraitNodeType.Selection then
+                    C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
+                end
+    
+                if C_Traits.CanPurchaseRank(activeConfigID, entry.nodeID, entry.selectionEntryID) then
+                    for rank=1, entry.ranksPurchased do
+                        C_Traits.PurchaseRank(activeConfigID, entry.nodeID)
+                    end
                 end
             end
         end
-    end
 
-    TalentLoadouts.pendingLoadout = configInfo
-    TalentLoadouts.pendingCategory = categoryInfo
-    TalentLoadouts.lastUpdated = nil
-    TalentLoadouts.lastUpdatedCategory = nil
-    RegisterEvent("CONFIG_COMMIT_FAILED")
-    RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+        RegisterEvent("CONFIG_COMMIT_FAILED")
+        RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+    
+        TalentLoadouts.pendingLoadout = configInfo
+        TalentLoadouts.pendingCategory = categoryInfo
+        TalentLoadouts.lastUpdated = nil
+        TalentLoadouts.lastUpdatedCategory = nil
 
-    TalentLoadouts:UpdateDropdownText()
-    TalentLoadouts:UpdateDataObj()
+        TalentLoadouts:UpdateDropdownText()
+        TalentLoadouts:UpdateDataObj()
 
-    local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
-    if not canChange then 
-        if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
-            configInfo.error = true
+        local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
+        if not canChange then 
+            if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
+                configInfo.error = true
+            end
+    
+            HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
+            TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
+            return 
         end
-
-        HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
-        TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
-        return 
+    
+        if ImprovedTalentLoadoutsDB.options.applyLoadout then
+            C_ClassTalents.CommitConfig(configInfo.ID)
+        else
+            HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
+        end
     end
 
-    if ImprovedTalentLoadoutsDB.options.applyLoadout then
-        C_ClassTalents.CommitConfig(configInfo.ID)
-    else
-        HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
-    end
-
-    if not C_Traits.ConfigHasStagedChanges(activeConfigID) then
+    if not C_Traits.ConfigHasStagedChanges(activeConfigID) and TalentLoadouts.pendingLoadout then
         TalentLoadouts:OnLoadoutSuccess()
     end
 
@@ -565,6 +617,7 @@ function TalentLoadouts:OnLoadoutSuccess()
     TalentLoadouts.charDB.lastCategory = categoryInfo
     TalentLoadouts.pendingLoadout = nil
     TalentLoadouts.pendingCategory = nil
+    TalentLoadouts.blizzImported = nil
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj(configInfo)
@@ -572,6 +625,8 @@ function TalentLoadouts:OnLoadoutSuccess()
     UnhookFunction("RollbackConfig")
     UnregisterEvent("CONFIG_COMMIT_FAILED")
     UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
+
+    TalentLoadouts.pendingDeletion = true
 end
 
 function TalentLoadouts:OnUnknownLoadoutSuccess()
@@ -595,6 +650,8 @@ function TalentLoadouts:OnUnknownLoadoutSuccess()
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
+
+    TalentLoadouts.pendingDeletion = true
 end
 
 function TalentLoadouts:OnLoadoutFail(event)
@@ -613,6 +670,7 @@ function TalentLoadouts:OnLoadoutFail(event)
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
+    TalentLoadouts:DeleteTempLoadouts()
 end
 
 local function FindFreeConfigID()
@@ -1872,6 +1930,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.loadBlizzard
                 end 
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Load as Blizzard Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.loadAsBlizzard = not ImprovedTalentLoadoutsDB.options.loadAsBlizzard
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.loadAsBlizzard
+                end
             },
         level)
     elseif menu == "specButtonType" then
