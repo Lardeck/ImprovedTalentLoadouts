@@ -2208,25 +2208,29 @@ end
 
 function TalentLoadouts:InitializeHooks()
     ClassTalentFrame:HookScript("OnShow", function()
+        C_ClassTalents.UpdateLastSelectedSavedConfigID(TalentLoadouts.specID, nil)
+        securecall(ClassTalentFrame.TalentsTab.RefreshLoadoutOptions, ClassTalentFrame.TalentsTab)
+        securecall(ClassTalentFrame.TalentsTab.LoadoutDropDown.ClearSelection, ClassTalentFrame.TalentsTab.LoadoutDropDown)
+
         if ClassTalentFrame.inspectUnit then
             local specID = GetInspectSpecialization(ClassTalentFrame.inspectUnit)
-            if not specID or specID ~= self.specID then
-                self.dropdown:Hide()
-                self.saveButton:Hide()
+            if not specID or specID ~= TalentLoadouts.specID then
+                TalentLoadouts.dropdown:Hide()
+                TalentLoadouts.saveButton:Hide()
             end
 
-            for _, specButton in ipairs(self.specButtons) do
+            for _, specButton in ipairs(TalentLoadouts.specButtons) do
                 specButton:Hide()
             end
-            self.hidden = true
-        elseif self.hidden then
-            self.dropdown:Show()
-            self.saveButton:Show()
-            for _, specButton in ipairs(self.specButtons) do
+            TalentLoadouts.hidden = true
+        elseif TalentLoadouts.hidden then
+            TalentLoadouts.dropdown:Show()
+            TalentLoadouts.saveButton:Show()
+            for _, specButton in ipairs(TalentLoadouts.specButtons) do
                 specButton:Show()
             end
 
-            self.hidden = nil
+            TalentLoadouts.hidden = nil
         end
     end)
 
