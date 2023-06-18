@@ -6,7 +6,7 @@ local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 local internalVersion = 6
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
-local IPL_LOADOUT_NAME = "[ITL] Temp"
+local ITL_LOADOUT_NAME = "[ITL] Temp"
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local dataObjText = "ITL: %s, %s"
@@ -407,7 +407,7 @@ end
 function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     local specLoadouts = self.globalDB.configIDs[currentSpecID]
     local configInfo = C_Traits.GetConfigInfo(configID)
-    if configInfo.type == 1 and configInfo.name ~= IPL_LOADOUT_NAME then
+    if configInfo.type == 1 and configInfo.name ~= ITL_LOADOUT_NAME then
         configInfo.default = configID == C_ClassTalents.GetActiveConfigID() or nil
         specLoadouts[configID] = configInfo
         self:InitializeTalentLoadout(configID)
@@ -420,14 +420,14 @@ function TalentLoadouts:DeleteTempLoadouts()
 
     for _, configID in ipairs(configIDs) do
         local configInfo = C_Traits.GetConfigInfo(configID)
-        if configInfo.name == IPL_LOADOUT_NAME then
+        if configInfo.name == ITL_LOADOUT_NAME then
             C_ClassTalents.DeleteConfig(configID)
         end
     end
 
-    C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
-
-    if ClassTalentFrame then
+    if ClassTalentFrame and ClassTalentFrame:IsShown() then
+        C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
+        securecall(ClassTalentFrame.TalentsTab.RefreshLoadoutOptions, ClassTalentFrame.TalentsTab)
         securecall(ClassTalentFrame.TalentsTab.LoadoutDropDown.ClearSelection, ClassTalentFrame.TalentsTab.LoadoutDropDown)
     end
 
@@ -519,15 +519,12 @@ local function LoadLoadout(self, configInfo, categoryInfo)
             TalentLoadouts.pendingCategory = categoryInfo
             TalentLoadouts.lastUpdated = nil
             TalentLoadouts.lastUpdatedCategory = nil
-            
-            RegisterEvent("CONFIG_COMMIT_FAILED")
-            RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
         
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateDataObj()
 
             TalentLoadouts.blizzImported = true
-            local success = securecall(ClassTalentFrame.TalentsTab.ImportLoadout, ClassTalentFrame.TalentsTab, configInfo.exportString, IPL_LOADOUT_NAME)
+            local success = securecall(ClassTalentFrame.TalentsTab.ImportLoadout, ClassTalentFrame.TalentsTab, configInfo.exportString, ITL_LOADOUT_NAME)
             if not success then
                 configInfo.error = true
                 HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
