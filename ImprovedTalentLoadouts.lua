@@ -603,10 +603,6 @@ function TalentLoadouts:OnLoadoutSuccess()
     local configInfo = TalentLoadouts.pendingLoadout
     local categoryInfo = TalentLoadouts.pendingCategory
 
-    if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
-        TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
-    end
-
     TalentLoadouts:LoadGearAndLayout(configInfo)
 
     TalentLoadouts.charDB.lastLoadout = configInfo.ID
@@ -623,7 +619,13 @@ function TalentLoadouts:OnLoadoutSuccess()
     UnregisterEvent("CONFIG_COMMIT_FAILED")
     UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
 
+
     TalentLoadouts.pendingDeletion = true
+    C_Timer.After(0.25, function()
+        if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
+            TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+        end
+    end)
 end
 
 function TalentLoadouts:OnUnknownLoadoutSuccess()
