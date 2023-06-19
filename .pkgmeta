@@ -6,6 +6,8 @@ externals:
     url: https://github.com/rossnichols/LibSerialize
     tag: v1.0.0
   Libs/LibUIDropDownMenu: https://repos.wowace.com/wow/libuidropdownmenu/trunk/LibUIDropDownMenu
-
+  Libs/TaintLess:
+      url: https://www.townlong-yak.com/addons.git/taintless
+      commit: default
 ignore:
   - README.md
