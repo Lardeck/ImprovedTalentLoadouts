@@ -5,6 +5,7 @@
 ## OptionalDeps: Simulationcraft
 ## X-Curse-Project-ID: 822393
 
+Libs\TaintLess\TaintLess.xml
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 Libs\LibDeflate\LibDeflate.lua
