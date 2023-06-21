@@ -1,9 +1,11 @@
 name: Release messages to discord announcement channel
 
-on: 
-  release:
+# Only trigger, when the build workflow succeeded
+on:
+  workflow_run:
+    workflows: ["Package and release"]
     types:
-      - created
+      - completed
 
 jobs:
   run_main:
