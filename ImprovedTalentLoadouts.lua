@@ -416,16 +416,24 @@ function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     end
 end
 
+-- Delete duplicate Temp Loadouts
 function TalentLoadouts:DeleteTempLoadouts()
     if InCombatLockdown() then return end
 
     local specID = self.specID
     local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
 
+    local counter = 0
     for _, configID in ipairs(configIDs) do
         local configInfo = C_Traits.GetConfigInfo(configID)
         if configInfo.name == ITL_LOADOUT_NAME then
-            C_ClassTalents.DeleteConfig(configID)
+            if counter > 1 then
+                C_ClassTalents.DeleteConfig(configID)
+            else
+                self.charDB.tempLoadout = configID
+            end
+
+            counter = counter + 1
         end
     end
 
@@ -498,7 +506,13 @@ local function CommitLoadout()
     local configInfo = TalentLoadouts.pendingLoadout
     if configInfo then
         local activeConfigID = C_ClassTalents.GetActiveConfigID()
-        C_Traits.ResetTree(activeConfigID, configInfo.treeIDs[1])
+        C_Traits.RollbackConfig(C_ClassTalents.GetActiveConfigID())
+    
+        if configInfo.currencyID then
+            securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
+        else
+            C_Traits.ResetTree(activeConfigID, configInfo.treeIDs[1])
+        end
 
         local entryInfo = configInfo.entryInfo
         table.sort(entryInfo, function(a, b)
@@ -594,11 +608,6 @@ local function LoadLoadout(self, configInfo, categoryInfo)
             end
         end
     else
-        if configInfo.currencyID then
-            securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
-        else
-            C_Traits.ResetTree(activeConfigID, treeID)
-        end
 
         TalentLoadouts.pendingLoadout = configInfo
         TalentLoadouts.pendingCategory = categoryInfo
