@@ -518,12 +518,6 @@ local function CommitLoadout()
     if configInfo then
         local activeConfigID = C_ClassTalents.GetActiveConfigID()
 
-        if C_Traits.ConfigHasStagedChanges(activeConfigID) then
-            C_Traits.RollbackConfig(activeConfigID)
-        end
-
-        C_Traits.ResetTree(activeConfigID, configInfo.treeIDs[1])
-
         local entryInfo = configInfo.entryInfo
         table.sort(entryInfo, function(a, b)
             local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
