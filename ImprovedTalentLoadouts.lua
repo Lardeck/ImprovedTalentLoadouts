@@ -139,10 +139,12 @@ do
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
             TalentLoadouts:UpdateIterator()
-        elseif event == "TRAIT_TREE_CURRENCY_INFO_UPDATED" or event == "CONFIG_COMMIT_FAILED" then
-            if (TalentLoadouts.pendingLoadout and not UnitCastingInfo("player")) or TalentLoadouts.lastUpdated then
-                TalentLoadouts:OnLoadoutFail(event)
-            end
+        elseif event == "CONFIG_COMMIT_FAILED" then
+            C_Timer.After(0.1, function()
+                if (TalentLoadouts.pendingLoadout and not UnitCastingInfo("player")) or TalentLoadouts.lastUpdated then
+                    TalentLoadouts:OnLoadoutFail(event)
+                end
+            end)
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" and arg3 == Constants.TraitConsts.COMMIT_COMBAT_TRAIT_CONFIG_CHANGES_SPELL_ID then
             if TalentLoadouts.pendingLoadout then
                 TalentLoadouts:OnLoadoutSuccess()
