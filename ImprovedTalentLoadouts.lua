@@ -503,17 +503,26 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
     end
 end
 
+local function ResetTree(treeID)
+    local activeConfigID = C_ClassTalents.GetActiveConfigID()
+
+    if C_Traits.ConfigHasStagedChanges(activeConfigID) then
+        C_Traits.RollbackConfig(activeConfigID)
+    end
+
+    C_Traits.ResetTree(activeConfigID, treeID)
+end
+
 local function CommitLoadout()
     local configInfo = TalentLoadouts.pendingLoadout
     if configInfo then
         local activeConfigID = C_ClassTalents.GetActiveConfigID()
-        C_Traits.RollbackConfig(C_ClassTalents.GetActiveConfigID())
-    
-        if configInfo.currencyID then
-            securecallfunction(C_Traits.ResetTreeByCurrency, activeConfigID, treeID, configInfo.currencyID)
-        else
-            C_Traits.ResetTree(activeConfigID, configInfo.treeIDs[1])
+
+        if C_Traits.ConfigHasStagedChanges(activeConfigID) then
+            C_Traits.RollbackConfig(activeConfigID)
         end
+
+        C_Traits.ResetTree(activeConfigID, configInfo.treeIDs[1])
 
         local entryInfo = configInfo.entryInfo
         table.sort(entryInfo, function(a, b)
@@ -540,17 +549,28 @@ local function CommitLoadout()
         end
 
         if ImprovedTalentLoadoutsDB.options.applyLoadout then
+            local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
+            if not canChange then 
+                if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
+                    configInfo.error = true
+                end
+        
+                TalentLoadouts:OnLoadoutFail()
+                TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
+                return
+            end
+
             if pcall(C_Traits.GetConfigInfo, TalentLoadouts.charDB.tempLoadout) then
                 C_ClassTalents.CommitConfig(TalentLoadouts.charDB.tempLoadout)
+                C_ClassTalents.UpdateLastSelectedSavedConfigID(TalentLoadouts.specID, TalentLoadouts.charDB.tempLoadout)
             else
                 C_ClassTalents.CommitConfig(activeConfigID)
             end
+
+            RegisterEvent("CONFIG_COMMIT_FAILED")
         else
             HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
         end
-
-        RegisterEvent("CONFIG_COMMIT_FAILED")
-        --RegisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
 
         if not C_Traits.ConfigHasStagedChanges(activeConfigID) and TalentLoadouts.pendingLoadout then
             TalentLoadouts:OnLoadoutSuccess()
@@ -561,6 +581,7 @@ end
 function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
     if newConfigInfo.name == ITL_LOADOUT_NAME then
         self.charDB.tempLoadout = newConfigInfo.ID
+        ResetTree(newConfigInfo.treeIDs[1])
         C_Timer.After(0.1, function()
             CommitLoadout()
         end)
@@ -605,7 +626,10 @@ local function LoadLoadout(self, configInfo, categoryInfo)
                 C_ClassTalents.RequestNewConfig(ITL_LOADOUT_NAME)
             elseif TalentLoadouts.charDB.tempLoadout and C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout) then
                 C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, TalentLoadouts.charDB.tempLoadout)
-                CommitLoadout()
+                ResetTree(configInfo.treeIDs[1])
+                C_Timer.After(0, function()
+                    CommitLoadout()
+                end)
             end
         end
     else
@@ -615,21 +639,15 @@ local function LoadLoadout(self, configInfo, categoryInfo)
         TalentLoadouts.lastUpdated = nil
         TalentLoadouts.lastUpdatedCategory = nil
 
-        CommitLoadout()
+        ResetTree(configInfo.treeIDs[1])
+        C_Timer.After(0, function()
+            CommitLoadout()
+        end)
     
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj()
 
-        local canChange, _, changeError = C_ClassTalents.CanChangeTalents()
-        if not canChange then 
-            if changeError == ERR_TALENT_FAILED_UNSPENT_TALENT_POINTS then
-                configInfo.error = true
-            end
-    
-            HookFunction(C_Traits, "RollbackConfig", TalentLoadouts.OnLoadoutFail)
-            TalentLoadouts:Print("|cffff0000Can't load Loadout.|r", changeError)
-            return 
-        end
+        
     end
 
     configInfo.error = nil
@@ -653,18 +671,17 @@ function TalentLoadouts:OnLoadoutSuccess()
 
     UnhookFunction("RollbackConfig")
     UnregisterEvent("CONFIG_COMMIT_FAILED")
-    UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
 
     if TalentLoadouts.blizzImported then
         TalentLoadouts.blizzImported = nil
         TalentLoadouts.pendingDeletion = true
     end
 
-    C_Timer.After(0.25, function()
-        if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
+    if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
+        C_Timer.After(0.25, function()
             TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
-        end
-    end)
+        end)
+    end
 end
 
 function TalentLoadouts:OnUnknownLoadoutSuccess()
@@ -688,6 +705,8 @@ function TalentLoadouts:OnUnknownLoadoutSuccess()
         C_ClassTalents.UpdateLastSelectedSavedConfigID(self.specID, nil)
     end
 
+    UnregisterEvent("CONFIG_COMMIT_FAILED")
+
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
 
@@ -695,19 +714,14 @@ function TalentLoadouts:OnUnknownLoadoutSuccess()
     
 end
 
-function TalentLoadouts:OnLoadoutFail(event)
+function TalentLoadouts:OnLoadoutFail()
     TalentLoadouts.pendingLoadout = nil
     TalentLoadouts.pendingCategory = nil
     TalentLoadouts.lastUpdated = nil
     TalentLoadouts.lastUpdatedCategory = nil
 
     UnhookFunction("RollbackConfig")
-    UnregisterEvent("TRAIT_TREE_CURRENCY_INFO_UPDATED")
     UnregisterEvent("CONFIG_COMMIT_FAILED")
-
-    if event == "CONFIG_COMMIT_FAILED" then
-        C_Traits.RollbackConfig(C_ClassTalents.GetActiveConfigID())
-    end
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
