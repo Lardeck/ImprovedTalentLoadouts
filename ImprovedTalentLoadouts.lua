@@ -487,10 +487,9 @@ function TalentLoadouts:UpdateDataObj(configInfo)
 end
 
 function TalentLoadouts:LoadGearAndLayout(configInfo)
-    local inCombat = InCombatLockdown()
-
-    if not inCombat then
+    if not InCombatLockdown() then
         if configInfo.gearset then
+            -- Without delay it may fail.
             C_Timer.After(0, function() EquipmentManager_EquipSet(configInfo.gearset) end)
         end
 
@@ -1071,7 +1070,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
             return
         end
     else
-        self:InitializeTalentLoadout(fakeConfigID, exportString)
+        self:InitializeTalentLoadout(fakeConfigID)
     end
 
     if not C_Traits.ConfigHasStagedChanges(activeConfigID) then
