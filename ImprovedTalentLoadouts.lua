@@ -1061,7 +1061,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     configInfo.currencyID = currencyID
     configInfo.categories = {}
 
-    local isInspecting = secreucall(ClassTalentFrame.TalentsTab.IsInspecting, ClassTalentFrame.TalentsTab)
+    local isInspecting = securecall(ClassTalentFrame.TalentsTab.IsInspecting, ClassTalentFrame.TalentsTab)
     if isInspecting then
         local treeID = configInfo.treeIDs[1]
         local unit = securecall(ClassTalentFrame.GetInspectUnit, ClassTalentFrame)
