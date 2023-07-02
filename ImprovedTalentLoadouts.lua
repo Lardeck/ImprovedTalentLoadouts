@@ -1393,6 +1393,8 @@ function TalentLoadouts:UpdateActionBars(configInfo)
                     key = string.format("%s\031%s", name, body)
                     macroType = id > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
                 end
+            elseif actionType == "spell" then
+                id = FindBaseSpellByID(id)
             end
 
             actionBars[actionSlot] = {
