@@ -555,10 +555,10 @@ local function CommitLoadout()
             end
 
             if pcall(C_Traits.GetConfigInfo, TalentLoadouts.charDB.tempLoadout) then
-                C_ClassTalents.CommitConfig(TalentLoadouts.charDB.tempLoadout)
-                C_ClassTalents.UpdateLastSelectedSavedConfigID(TalentLoadouts.specID, TalentLoadouts.charDB.tempLoadout)
+                RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, TalentLoadouts.charDB.tempLoadout))
+                RunNextFrame(GenerateClosure(C_ClassTalents.UpdateLastSelectedSavedConfigID, TalentLoadouts.specID, TalentLoadouts.charDB.tempLoadout))
             else
-                C_ClassTalents.CommitConfig(activeConfigID)
+                RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, activeConfigID))
             end
 
             RegisterEvent("CONFIG_COMMIT_FAILED")
@@ -576,9 +576,7 @@ function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
     if newConfigInfo.name == ITL_LOADOUT_NAME then
         self.charDB.tempLoadout = newConfigInfo.ID
         ResetTree(newConfigInfo.treeIDs[1])
-        C_Timer.After(0.1, function()
-            CommitLoadout()
-        end)
+        RunNextFrame(CommitLoadout)
     end
 end
 
@@ -621,9 +619,7 @@ local function LoadLoadout(self, configInfo, categoryInfo)
             elseif TalentLoadouts.charDB.tempLoadout and C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout) then
                 C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, TalentLoadouts.charDB.tempLoadout)
                 ResetTree(configInfo.treeIDs[1])
-                C_Timer.After(0, function()
-                    CommitLoadout()
-                end)
+                RunNextFrame(CommitLoadout)
             end
         end
     else
@@ -634,9 +630,7 @@ local function LoadLoadout(self, configInfo, categoryInfo)
         TalentLoadouts.lastUpdatedCategory = nil
 
         ResetTree(configInfo.treeIDs[1])
-        C_Timer.After(0, function()
-            CommitLoadout()
-        end)
+        RunNextFrame(CommitLoadout)
     
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj()
