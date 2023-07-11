@@ -99,6 +99,7 @@ do
     RegisterEvent("UPDATE_MACROS")
     RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     RegisterEvent("EQUIPMENT_SWAP_FINISHED")
+    RegisterEvent("VOID_STORAGE_UPDATE")
     eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
@@ -116,6 +117,9 @@ do
             TalentLoadouts:SaveCurrentLoadouts()
             TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
             TalentLoadouts:DeleteTempLoadouts()
+            TalentLoadouts:UpdateKnownFlyouts()
+        elseif event == "VOID_STORAGE_UPDATE" then
+            TalentLoadouts:UpdateKnownFlyouts()
         elseif event == "PLAYER_REGEN_ENABLED" then
             RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
         elseif event == "PLAYER_REGEN_DISABLED" then
@@ -197,6 +201,7 @@ function TalentLoadouts:InitializeCharacterDB()
     self.globalDB = ImprovedTalentLoadoutsDB.loadouts.globalLoadouts[UnitClassBase("player")]
     self.charMacros = ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName]
     self.globalMacros = ImprovedTalentLoadoutsDB.actionbars.macros.global
+    self.flyouts = {}
     self.specID = PlayerUtil.GetCurrentSpecID()
     self:CheckDBIntegrity()
     self:CheckForVersionUpdates()
@@ -1378,6 +1383,8 @@ local function RemoveActionBars(self, configID)
 end
 
 function TalentLoadouts:UpdateActionBars(configInfo)
+    self:UpdateKnownFlyouts()
+
     configInfo.actionBars = configInfo.actionBars or {}
     local actionBars = {}
 
@@ -1395,6 +1402,8 @@ function TalentLoadouts:UpdateActionBars(configInfo)
                 end
             elseif actionType == "spell" then
                 id = FindBaseSpellByID(id)
+            elseif actionType == "flyout" then
+                id = self.flyouts[id]
             end
 
             actionBars[actionSlot] = {
@@ -1466,6 +1475,9 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
                 PickupSpell(spellID)
+                pickedUp = true
+            elseif slotInfo.type == "flyout" then
+                PickupSpellBookItem(slotInfo.id, BOOKTYPE_SPELL)
                 pickedUp = true
             elseif slotInfo.type == "item" then
                 PickupItem(slotInfo.id)
@@ -2498,6 +2510,22 @@ function TalentLoadouts:UpdateMacros()
 
     --backwards compatibility
     self.charMacros = self.characterMacros
+end
+
+function TalentLoadouts:UpdateKnownFlyouts()
+    self.flyouts = {}
+
+    for i = 1, GetNumSpellTabs() do
+        local offset, numSpells, _, offSpecID = select(3, GetSpellTabInfo(i));
+        if offSpecID == 0 then
+           for slotId = offset + 1, numSpells + offset do
+              local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
+              if spellType  and spellType == "FLYOUT" then
+                self.flyouts[id] = slotId
+              end
+           end
+        end
+     end
 end
 
 SLASH_IMPROVEDTALENDLOADOUTS1 = '/itl'
