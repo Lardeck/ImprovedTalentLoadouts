@@ -566,7 +566,11 @@ end
 
 function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
     if newConfigInfo.name == ITL_LOADOUT_NAME then
-        self.charDB.tempLoadout = newConfigInfo.ID
+        if not self.charDB.tempLoadout or self.charDB.tempLoadout ~= newConfigInfo.ID then
+            self.charDB.tempLoadout = newConfigInfo.ID
+            C_ClassTalents.SetUsesSharedActionBars(newConfigInfo.ID, true)
+        end
+
         ResetTree(newConfigInfo.treeIDs[1])
         RunNextFrame(CommitLoadout)
     end
