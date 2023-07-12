@@ -4,7 +4,7 @@ local talentUI = "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
-local internalVersion = 6
+local internalVersion = 7
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
 local ITL_LOADOUT_NAME = "[ITL] Temp"
 
@@ -246,7 +246,7 @@ function TalentLoadouts:CheckForDBUpdates()
         ["showCategoryName"] = false,
         ["sortLoadoutsByName"] = false,
         ["loadActionbarsSpec"] = false,
-        ["loadAsBlizzard"] = false,
+        ["loadAsBlizzard"] = true,
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -260,21 +260,8 @@ end
 function TalentLoadouts:CheckForVersionUpdates()
     local currentVersion = ImprovedTalentLoadoutsDB.version
 
-    local categories = self.globalDB.categories
-    if categories then
-        for _, specCategories in pairs(categories) do
-            for _, categoryInfo in pairs(specCategories) do
-                if categoryInfo.parents then
-                    local index = tIndexOf(categoryInfo.parents, categoryInfo.key)
-                    if index then
-                        tremove(categoryInfo.parents, index)
-                        if #categoryInfo.parents == 0 then
-                            categoryInfo.isSubCategory = nil
-                        end
-                    end
-                end
-            end
-        end
+    if currentVersion < 7 then
+        ImprovedTalentLoadoutsDB.options.loadAsBlizzard = true
     end
 
     ImprovedTalentLoadoutsDB.version = internalVersion
