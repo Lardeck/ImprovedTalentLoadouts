@@ -260,7 +260,7 @@ end
 function TalentLoadouts:CheckForVersionUpdates()
     local currentVersion = ImprovedTalentLoadoutsDB.version
 
-    if currentVersion < 7 then
+    if (currentVersion or 0) < 7 then
         ImprovedTalentLoadoutsDB.options.loadAsBlizzard = true
     end
 
