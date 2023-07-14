@@ -247,6 +247,7 @@ function TalentLoadouts:CheckForDBUpdates()
         ["sortLoadoutsByName"] = false,
         ["loadActionbarsSpec"] = false,
         ["loadAsBlizzard"] = true,
+        ["useAddOnLoadoutFallback"] = false,
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -577,7 +578,7 @@ function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
 end
 
 -- TODO: Refactor in the next version
-local function LoadLoadout(self, configInfo, categoryInfo)
+local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     if not configInfo then return end
 
     local currentSpecID = TalentLoadouts.specID
@@ -595,11 +596,10 @@ local function LoadLoadout(self, configInfo, categoryInfo)
         return
     end
 
-    local activeConfigID = C_ClassTalents.GetActiveConfigID()
-    local treeID = configInfo.treeIDs[1]
-
-    if ImprovedTalentLoadoutsDB.options.loadAsBlizzard then
-        if C_ClassTalents.CanCreateNewConfig() and TalentLoadouts.charDB.lastLoadout ~= configInfo.ID then
+    if not forceBlizzardDisable and ImprovedTalentLoadoutsDB.options.loadAsBlizzard then
+        local tempLoadoutInfo = TalentLoadouts.charDB.tempLoadout and C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout)
+        local canCreate = C_ClassTalents.CanCreateNewConfig()
+        if (tempLoadoutInfo or canCreate) and TalentLoadouts.charDB.lastLoadout ~= configInfo.ID then
             TalentLoadouts.pendingLoadout = configInfo
             TalentLoadouts.pendingCategory = categoryInfo
             TalentLoadouts.lastUpdated = nil
@@ -610,16 +610,21 @@ local function LoadLoadout(self, configInfo, categoryInfo)
 
             TalentLoadouts.blizzImported = true
 
-            if not TalentLoadouts.charDB.tempLoadout or not C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout) then
+            if not TalentLoadouts.charDB.tempLoadout or not tempLoadoutInfo then
                 C_ClassTalents.RequestNewConfig(ITL_LOADOUT_NAME)
-            elseif TalentLoadouts.charDB.tempLoadout and C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout) then
+            elseif tempLoadoutInfo then
                 C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, TalentLoadouts.charDB.tempLoadout)
                 ResetTree(configInfo.treeIDs[1])
                 RunNextFrame(CommitLoadout)
             end
+        elseif not tempLoadoutInfo or not canCreate then
+            if not ImprovedTalentLoadoutsDB.options.useBlizzardFallback then
+                TalentLoadouts:Print("|cFFFF0000Can't load the loadouts as a Blizzard one because you have 10 Blizzard loadouts|r. |cFFFFFF00Delete one of them or disable \"Options -> Loadouts -> Load As Blizzard Loadout\"|r. You can also enable the \"Fall back to AddOn Loadout \" option to fall back to the old way of loading loadouts if the AddOn can't create/find the " .. ITL_LOADOUT_NAME .. " loadout.")
+            else
+                LoadLoadout(self, configInfo, categoryInfo, true)
+            end
         end
     else
-
         TalentLoadouts.pendingLoadout = configInfo
         TalentLoadouts.pendingCategory = categoryInfo
         TalentLoadouts.lastUpdated = nil
@@ -1994,6 +1999,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.loadAsBlizzard
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Fall back to AddOn Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback = not ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback
                 end
             },
         level)
