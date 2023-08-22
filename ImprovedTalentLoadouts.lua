@@ -187,9 +187,7 @@ end
 function TalentLoadouts:InitializeCharacterDB()
     local playerName = GetPlayerName()
     if not ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName] then
-        ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName] = {
-            firstLoad = true
-        }
+        ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName] = {}
     end
 
     if not ImprovedTalentLoadoutsDB.actionbars.macros.char[playerName] then
@@ -451,23 +449,18 @@ function TalentLoadouts:SaveCurrentLoadouts()
         self:CheckDBIntegrity()
     end
 
-    local firstLoad = self.charDB.firstLoad
-    if self.charDB.firstLoad then
-        for specIndex=1, GetNumSpecializations() do
-            local specID = GetSpecializationInfo(specIndex)
-            self.globalDB.configIDs[specID] = self.globalDB.configIDs[specID] or {}
+    for specIndex=1, GetNumSpecializations() do
+        local specID = GetSpecializationInfo(specIndex)
+        self.globalDB.configIDs[specID] = self.globalDB.configIDs[specID] or {}
 
-            local specLoadouts = self.globalDB.configIDs[specID]
-            local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
+        local specLoadouts = self.globalDB.configIDs[specID]
+        local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
 
-            for _, configID in ipairs(configIDs) do
-                specLoadouts[configID] = specLoadouts[configID] or C_Traits.GetConfigInfo(configID)
-                firstLoad = false
-            end
+        for _, configID in ipairs(configIDs) do
+            specLoadouts[configID] = specLoadouts[configID] or C_Traits.GetConfigInfo(configID)
         end
     end
 
-    self.charDB.firstLoad = firstLoad
     local currentSpecID = self.specID
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     if activeConfigID then
