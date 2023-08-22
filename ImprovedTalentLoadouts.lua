@@ -1331,7 +1331,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
 end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_EXPORT"] = {
-    text = "Loadout Import Name",
+    text = "Loadout Export String",
     button1 = "Okay",
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
