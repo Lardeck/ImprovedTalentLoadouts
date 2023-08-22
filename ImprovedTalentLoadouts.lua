@@ -2529,14 +2529,14 @@ function TalentLoadouts:UpdateKnownFlyouts()
     for i = 1, GetNumSpellTabs() do
         local offset, numSpells, _, offSpecID = select(3, GetSpellTabInfo(i));
         if offSpecID == 0 then
-           for slotId = offset + 1, numSpells + offset do
-              local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
-              if spellType  and spellType == "FLYOUT" then
+            for slotId = offset + 1, numSpells + offset do
+                local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
+                if spellType  and spellType == "FLYOUT" then
                 self.flyouts[id] = slotId
-              end
-           end
+                end
+            end
         end
-     end
+    end
 end
 
 SLASH_IMPROVEDTALENDLOADOUTS1 = '/itl'
