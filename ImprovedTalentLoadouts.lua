@@ -2244,6 +2244,8 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 end
 
 function TalentLoadouts:UpdateDropdownText()
+    if not self.dropdown then return end
+
     local currentSpecID = self.specID
     local dropdownText = ""
 
