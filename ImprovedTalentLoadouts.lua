@@ -290,7 +290,7 @@ function TalentLoadouts:UpdateActionBar()
         C_Timer.After(0.1, function()
             self:LoadActionBar(configInfo.actionBars, configInfo.name)
         end)
-    else
+    elseif not configInfo then
         self:Print("Couldn't find the last loadout of the spec. Make sure that the dropdown doesn't say \"Unknown\". This means that you've changed the tree without updating a loadout.")
     end
 end
