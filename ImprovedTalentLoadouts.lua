@@ -724,6 +724,16 @@ function TalentLoadouts:UpdateCurrentExportString()
     end
 end
 
+function TalentLoadouts:LoadLoadoutByName(name)
+    local configIDs = self.globalDB.configIDs[self.specID]
+    for _, configInfo in pairs(configIDs) do
+        if configInfo.name == name then
+            LoadLoadout(nil, configInfo)
+            break
+        end
+    end
+end
+
 local function FindFreeConfigID()
     local freeIndex = 1
 
