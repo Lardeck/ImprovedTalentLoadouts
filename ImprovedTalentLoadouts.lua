@@ -667,6 +667,7 @@ function TalentLoadouts:OnLoadoutSuccess()
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         C_Timer.After(0.25, function()
             TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+            TalentLoadouts:UpdateCurrentExportString()
         end)
     end
 end
@@ -712,6 +713,15 @@ function TalentLoadouts:OnLoadoutFail()
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
+end
+
+function TalentLoadouts:UpdateCurrentExportString()
+    local configID = TalentLoadouts.charDB[self.specID]
+    local configInfo = configID and self.globalDB.configIDs[self.specID][configID]
+    if configInfo then
+        local exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+        configInfo.exportString = exportString
+    end
 end
 
 local function FindFreeConfigID()
