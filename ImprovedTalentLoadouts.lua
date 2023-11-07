@@ -457,7 +457,12 @@ function TalentLoadouts:SaveCurrentLoadouts()
         local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
 
         for _, configID in ipairs(configIDs) do
-            specLoadouts[configID] = specLoadouts[configID] or C_Traits.GetConfigInfo(configID)
+            if not specLoadouts[configID] then
+                local configInfo = C_Traits.GetConfigInfo(configID)
+                if not (configInfo.name == ITL_LOADOUT_NAME) then
+                    specLoadouts[configID] = configInfo
+                end
+            end
         end
     end
 
