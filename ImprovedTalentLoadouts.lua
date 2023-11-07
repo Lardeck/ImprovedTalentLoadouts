@@ -1532,6 +1532,44 @@ local function RemoveFromSpecificCategory(self, configID, categoryInfo)
     end
 end
 
+StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_DELETE_ALL"] = {
+    text = "Do you want to delete all of your loadouts? Type \"DELETE\".",
+    button1 = "Delete",
+    button2 = "Cancel",
+    OnShow = function(self)
+        self.button1:Disable()
+    end,
+    OnAccept = function()
+        TalentLoadouts:DeleteAllLoadouts()
+    end,
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+    end,
+    EditBoxOnTextChanged = function(self)
+        if self:GetText() == "DELETE" then
+            self:GetParent().button1:Enable()
+            return
+        end
+
+        self:GetParent().button1:Disable()
+    end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+function TalentLoadouts:ShowDeleteAll()
+    StaticPopup_Show("TALENTLOADOUTS_LOADOUT_DELETE_ALL")
+end
+
+function TalentLoadouts:DeleteAllLoadouts()
+    wipe(self.globalDB.configIDs[self.specID])
+    LibDD.CloseDropDownMenus()
+end
+
 local loadoutFunctions = {
     assignGearset = {
         name = "Assign Gearset",
@@ -1861,6 +1899,18 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "fontSizeOptions"
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Delete All",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    TalentLoadouts:ShowDeleteAll()
+                end,
             },
         level)
     elseif menu == "fontSizeOptions" then
