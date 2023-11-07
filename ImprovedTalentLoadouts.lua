@@ -2551,11 +2551,14 @@ end
 
 SLASH_IMPROVEDTALENDLOADOUTS1 = '/itl'
 SlashCmdList["IMPROVEDTALENDLOADOUTS"] = function(msg, editbox)
-    if msg == 'saveActionbar' then
+    local action, argument = strsplit(" ", msg, 2)
+    if action == 'saveActionbar' then
         local currentSpecID = TalentLoadouts.specID
         local configID = TalentLoadouts.charDB[currentSpecID]
         if configID then
             UpdateActionBars(nil, configID)
         end
+    elseif action == 'load' and #argument > 0 then
+        TalentLoadouts:LoadLoadoutByName(argument)
     end
 end
