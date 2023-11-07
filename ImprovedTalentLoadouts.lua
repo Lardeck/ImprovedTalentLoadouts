@@ -494,14 +494,23 @@ function TalentLoadouts:LoadGearAndLayout(configInfo)
     end
 end
 
-local function ResetTree(treeID)
+local function ResetTree(treeID, treeType)
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
 
     if C_Traits.ConfigHasStagedChanges(activeConfigID) then
         C_Traits.RollbackConfig(activeConfigID)
     end
 
-    C_Traits.ResetTree(activeConfigID, treeID)
+    if not treeType or treeType == 1 then
+        C_Traits.ResetTree(activeConfigID, treeID)
+    else
+        local currencyInfo = C_Traits.GetTreeCurrencyInfo(activeConfigID, treeID, false)
+        if treeType == 2 then
+            C_Traits.ResetTreeByCurrency(activeConfigID, treeID, currencyInfo[1].traitCurrencyID)
+        elseif treeType == 3 then
+            C_Traits.ResetTreeByCurrency(activeConfigID, treeID, currencyInfo[2].traitCurrencyID)
+        end
+    end
 end
 
 local function CommitLoadout()
@@ -546,9 +555,11 @@ local function CommitLoadout()
             end
 
             if pcall(C_Traits.GetConfigInfo, TalentLoadouts.charDB.tempLoadout) then
+                --securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
                 RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, TalentLoadouts.charDB.tempLoadout))
                 RunNextFrame(GenerateClosure(C_ClassTalents.UpdateLastSelectedSavedConfigID, TalentLoadouts.specID, TalentLoadouts.charDB.tempLoadout))
             else
+                --securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
                 RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, activeConfigID))
             end
 
@@ -570,12 +581,11 @@ function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
             C_ClassTalents.SetUsesSharedActionBars(newConfigInfo.ID, true)
         end
 
-        ResetTree(newConfigInfo.treeIDs[1])
+        ResetTree(newConfigInfo.treeIDs[1], newConfigInfo.type)
         RunNextFrame(CommitLoadout)
     end
 end
 
--- TODO: Refactor in the next version
 local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     if not configInfo then return end
 
@@ -612,7 +622,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
                 C_ClassTalents.RequestNewConfig(ITL_LOADOUT_NAME)
             elseif tempLoadoutInfo then
                 C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, TalentLoadouts.charDB.tempLoadout)
-                ResetTree(configInfo.treeIDs[1])
+                ResetTree(configInfo.treeIDs[1], configInfo.type)
                 RunNextFrame(CommitLoadout)
             end
         elseif not tempLoadoutInfo or not canCreate then
@@ -628,13 +638,11 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
         TalentLoadouts.lastUpdated = nil
         TalentLoadouts.lastUpdatedCategory = nil
 
-        ResetTree(configInfo.treeIDs[1])
+        ResetTree(configInfo.treeIDs[1], configInfo.type)
         RunNextFrame(CommitLoadout)
     
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj()
-
-        
     end
 
     configInfo.error = nil
@@ -1068,7 +1076,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     dialog.data = 3
  end
 
- function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID, apply)
+ function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID, apply, treeType)
     local currentSpecID = self.specID
     local activeConfigID = C_ClassTalents.GetActiveConfigID()
     local fakeConfigID = FindFreeConfigID()
@@ -1078,6 +1086,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 
     local configInfo = self.globalDB.configIDs[currentSpecID][fakeConfigID]
     configInfo.fake = true
+    configInfo.type = treeType or 1
     configInfo.name = loadoutName
     configInfo.ID = fakeConfigID
     configInfo.currencyID = currencyID
@@ -1112,27 +1121,13 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
  end
 
  function TalentLoadouts:SaveCurrentClassTree(loadoutName)
-    local currencyInfoClass, currencyInfoSpec = unpack(ClassTalentFrame.TalentsTab.treeCurrencyInfo)
-    if currencyInfoClass then
-        loadoutName = string.format("[C] %s", loadoutName)
-        local configID = C_ClassTalents.GetActiveConfigID()
-        C_Traits.ResetTreeByCurrency(configID, self.treeID, currencyInfoSpec.traitCurrencyID)
-        self:SaveCurrentLoadout(loadoutName, currencyInfoClass.traitCurrencyID)
-        C_Traits.RollbackConfig(configID) 
-        securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
-    end
+    loadoutName = string.format("[C] %s", loadoutName)
+    self:ImportClassLoadout(self:GetExportStringForTree(), loadoutName)
  end
 
  function TalentLoadouts:SaveCurrentSpecTree(loadoutName)
-    local currencyInfoClass, currencyInfoSpec = unpack(ClassTalentFrame.TalentsTab.treeCurrencyInfo)
-    if currencyInfoClass then
-        loadoutName = string.format("[S] %s", loadoutName)
-        local configID = C_ClassTalents.GetActiveConfigID()
-        C_Traits.ResetTreeByCurrency(configID, self.treeID, currencyInfoClass.traitCurrencyID)
-        self:SaveCurrentLoadout(loadoutName, currencyInfoSpec.traitCurrencyID)
-        C_Traits.RollbackConfig(configID) 
-        securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
-    end
+    loadoutName = string.format("[S] %s", loadoutName)
+    self:ImportSpecLoadout(self:GetExportStringForTree(), loadoutName)
  end
 
  local function UpdateWithCurrentTree(self, configID, categoryInfo, isButtonUpdate)
@@ -1283,11 +1278,11 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
     text = "Loadout Import String",
     button1 = "Import",
     button2 = "Cancel",
-    OnAccept = function(self, apply)
-       local importString = self.editBox:GetText()
-       local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
-       dialog.data = importString
-       dialog.data2 = apply
+    OnAccept = function(self, apply, treeType)
+        local importString = self.editBox:GetText()
+        local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
+        dialog.data = {importString, treeType}
+        dialog.data2 = apply
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -1304,9 +1299,20 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     text = "Loadout Import Name",
     button1 = "Import",
     button2 = "Cancel",
-    OnAccept = function(self, importString, apply)
+    OnAccept = function(self, data, apply)
+        local importString, treeType = unpack(data)
         local loadoutName = self.editBox:GetText()
-        local fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName)
+        local fakeConfigID
+        if not treeType then
+            fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName)
+        elseif treeType == 2 then
+            loadoutName = string.format("[C] %s", loadoutName)
+            fakeConfigID = TalentLoadouts:ImportClassLoadout(importString, loadoutName)
+        elseif treeType == 3 then
+            loadoutName = string.format("[S] %s", loadoutName)
+            fakeConfigID = TalentLoadouts:ImportSpecLoadout(importString, loadoutName)
+        end
+
         if fakeConfigID and apply then
             LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][fakeConfigID])
         end
@@ -1327,6 +1333,19 @@ local function ImportCustomLoadout(self, apply)
     dialog.data = apply
 end
 
+local function ImportCustomSpecLoadout(self, apply)
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
+    dialog.data = apply
+    dialog.data2 = 2
+end
+
+local function ImportCustomClassLoadout(self, apply)
+    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
+    dialog.data = apply
+    dialog.data2 = 3
+end
+
+
 function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local currentSpecID = self.specID
     local fakeConfigID = FindFreeConfigID()
@@ -1344,6 +1363,83 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
             name = loadoutName,
             exportString = importString,
             entryInfo = entryInfo,
+            usesSharedActionBars = true,
+            categories = category and {[category] = true} or {},
+        }
+    else
+        self:Print("Invalid import string.")
+        return
+    end
+
+    return fakeConfigID
+end
+
+function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, category)
+    local currentSpecID = self.specID
+    local fakeConfigID = FindFreeConfigID()
+    if not fakeConfigID then return end
+
+    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+    local loadoutEntryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
+
+    if loadoutEntryInfo then
+        local configID = C_ClassTalents.GetActiveConfigID()
+        local specEntryInfo = {}
+        for i=1, #loadoutEntryInfo do
+            local nodeInfo = C_Traits.GetNodeInfo(configID, loadoutEntryInfo[i].nodeID)
+            local nodeCost = C_Traits.GetNodeCost(configID, nodeInfo.ID)
+            if C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseSpecIcon then
+                tinsert(specEntryInfo, loadoutEntryInfo[i])
+            end
+        end
+
+        self.globalDB.configIDs[currentSpecID][fakeConfigID] = {
+            ID = fakeConfigID,
+            fake = true,
+            type = 3,
+            treeIDs = {treeID},
+            name = loadoutName,
+            exportString = importString,
+            entryInfo = specEntryInfo,
+            usesSharedActionBars = true,
+            categories = category and {[category] = true} or {},
+        }
+    else
+        self:Print("Invalid import string.")
+        return
+    end
+
+    return fakeConfigID
+end
+
+function TalentLoadouts:ImportClassLoadout(importString, loadoutName, category)
+    local currentSpecID = self.specID
+    local fakeConfigID = FindFreeConfigID()
+    if not fakeConfigID then return end
+
+    local configID = C_ClassTalents.GetActiveConfigID()
+    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+    local loadoutEntryInfo = CreateEntryInfoFromString(configID, importString, treeID)
+
+    if loadoutEntryInfo then
+        local classEntryInfo = {}
+        for i=1, #loadoutEntryInfo do
+            local nodeInfo = C_Traits.GetNodeInfo(configID, loadoutEntryInfo[i].nodeID)
+            local nodeCost = C_Traits.GetNodeCost(configID, nodeInfo.ID)
+            if C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseClassIcon then
+                print("class", i)
+                tinsert(classEntryInfo, loadoutEntryInfo[i])
+            end
+        end
+
+        self.globalDB.configIDs[currentSpecID][fakeConfigID] = {
+            ID = fakeConfigID,
+            fake = true,
+            type = 2,
+            treeIDs = {treeID},
+            name = loadoutName,
+            exportString = importString,
+            entryInfo = classEntryInfo,
             usesSharedActionBars = true,
             categories = category and {[category] = true} or {},
         }
@@ -1718,12 +1814,13 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
         for configID, configInfo in iterateLoadouts() do
             if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
                 local color = (configInfo.error and "|cFFFF0000") or (configInfo.fake and "|cFF33ff96") or "|cFFFFD100"
+
                 LibDD:UIDropDownMenu_AddButton(
                     {
                         arg1 = configInfo,
                         value = configID,
                         colorCode = color,
-                        text = configInfo.name,
+                        text = string.format("%s%s", prefix or configInfo.name, prefix and configInfo.name or ""),
                         hasArrow = true,
                         minWidth = 170,
                         fontObject = dropdownFont,
@@ -1753,19 +1850,10 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Create Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
+                hasArrow = true,
                 notCheckable = 1,
                 func = SaveCurrentLoadout,
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Create Loadout + Apply",
-                arg1 = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                notCheckable = 1,
-                func = SaveCurrentLoadout,
+                menuList = "createLoadout"
             },
         level)
 
@@ -1774,19 +1862,10 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Import Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
+                hasArrow = true,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                text = "Import Loadout + Apply",
-                arg1 = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                notCheckable = 1,
-                func = ImportCustomLoadout,
+                menuList = "importLoadout"
             },
         level)
 
@@ -1819,6 +1898,89 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 func = LibDD.CloseDropDownMenus,
             },
         level)
+    elseif menu == "createLoadout" then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Create Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = SaveCurrentLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Create Loadout + Apply",
+                arg1 = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = SaveCurrentLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Create Class Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = SaveCurrentClassTree,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Create Spec Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = SaveCurrentSpecTree,
+            },
+        level)
+    elseif menu == "importLoadout" then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = ImportCustomLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Loadout + Apply",
+                arg1 = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = ImportCustomLoadout,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Class Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = ImportCustomClassLoadout,
+            },
+        level)
+        
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Import Spec Loadout",
+                minWidth = 170,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+                func = ImportCustomSpecLoadout,
+            },
+        level)
+
     elseif menu == "options" then
         LibDD:UIDropDownMenu_AddButton(
             {

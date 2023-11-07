@@ -12,5 +12,6 @@ Libs\LibDeflate\LibDeflate.lua
 Libs\LibSerialize\lib.xml
 Libs\LibUIDropDownMenu\LibUIDropDownMenu.xml
 Libs\libdatabroker-1-1\LibDataBroker-1.1.lua
+
 API.lua
 ImprovedTalentLoadouts.lua
