@@ -1303,7 +1303,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
         local importString, treeType = unpack(data)
         local loadoutName = self.editBox:GetText()
         local fakeConfigID
-        if not treeType then
+        if not treeType or treeType == 1 then
             fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName)
         elseif treeType == 2 then
             loadoutName = string.format("[C] %s", loadoutName)
@@ -1333,18 +1333,17 @@ local function ImportCustomLoadout(self, apply)
     dialog.data = apply
 end
 
-local function ImportCustomSpecLoadout(self, apply)
+local function ImportCustomClassLoadout(self, apply)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
     dialog.data = apply
     dialog.data2 = 2
 end
 
-local function ImportCustomClassLoadout(self, apply)
+local function ImportCustomSpecLoadout(self, apply)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
     dialog.data = apply
     dialog.data2 = 3
 end
-
 
 function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local currentSpecID = self.specID
@@ -1427,7 +1426,6 @@ function TalentLoadouts:ImportClassLoadout(importString, loadoutName, category)
             local nodeInfo = C_Traits.GetNodeInfo(configID, loadoutEntryInfo[i].nodeID)
             local nodeCost = C_Traits.GetNodeCost(configID, nodeInfo.ID)
             if C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseClassIcon then
-                print("class", i)
                 tinsert(classEntryInfo, loadoutEntryInfo[i])
             end
         end
