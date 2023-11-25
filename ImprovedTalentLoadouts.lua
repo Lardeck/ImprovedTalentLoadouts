@@ -1501,12 +1501,20 @@ function TalentLoadouts:UpdateActionBars(configInfo)
         if actionType then
             local key, macroType, macroName
             if actionType == "macro" then
-                local name, _, body = GetMacroInfo(id)
-                if name and body then
-                    macroName = name
-                    body = strtrim(body:gsub("\r", ""))
-                    key = string.format("%s\031%s", name, body)
-                    macroType = id > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
+                local name = GetActionText(actionSlot)
+                --local name, _, body = GetMacroInfo(id)
+
+                if name then
+                    local macroIndex = not self.duplicates[name] and (self.globalMacros[name] or self.characterMacros[name])
+                    if macroIndex then
+                        macroName = name
+                        macroType = macroIndex > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
+
+                        if body then
+                            body = strtrim(body:gsub("\r", ""))
+                            key = string.format("%s\031%s", name, body)
+                        end
+                    end
                 end
             elseif actionType == "spell" then
                 id = FindBaseSpellByID(id)
@@ -1556,6 +1564,8 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
         self:Print("Loading action bars of", name)
     end
 
+
+    local printWarning = false
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
@@ -1567,9 +1577,9 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
                 PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
-                if slotInfo.macroType and self[slotInfo.macroType] then
+                if slotInfo.macroType and self[slotInfo.macroType] and not self.duplicates[slotInfo.macroName] then
                     local id = self[slotInfo.macroType][slotInfo.key]
-                    if not id and ImprovedTalentLoadoutsDB.options.findMacroByName then
+                    if not id then
                         id = slotInfo.macroName and self[slotInfo.macroType][slotInfo.macroName]
                     end
 
@@ -1579,6 +1589,8 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
                     elseif not id then
                         self:Print("Please resave your action bars. Couldn't find macro: ", slotInfo.macroName, (slotInfo.body or ""):gsub("\n", " "))
                     end
+                elseif self.duplicates[slotInfo.macroName] then
+                    printWarning = true
                 end
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
@@ -1600,7 +1612,11 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
             PickupAction(actionSlot)
             ClearCursor()
         end
-    end    
+    end
+
+    if printWarning then
+        self:Print("|cffff0000For now the AddOn won't place macros with duplicate names until Blizzard fixes the issue with receiving the macro body.|r")
+    end
 end
 
 local function AddToCategory(self, categoryInfo, value)
@@ -2707,11 +2723,13 @@ function TalentLoadouts:UpdateMacros()
 
     self.globalMacros = {}
     self.characterMacros = {}
+    self.duplicates = {}
     local globalMacros = self.globalMacros
     local charMacros = self.characterMacros
 
     for macroSlot = 1, MAX_ACCOUNT_MACROS do
         local name, _, body = GetMacroInfo(macroSlot)
+
         if name then
             body = strtrim(body:gsub("\r", ""))
             local key = string.format("%s\031%s", name, body)
@@ -2722,7 +2740,12 @@ function TalentLoadouts:UpdateMacros()
                 key = key
             }
 
+            if globalMacros[name] then
+                self.duplicates[name] = true
+            end
+
             globalMacros[key] = macroSlot
+            globalMacros[name] = macroSlot
         elseif globalMacros[macroSlot] then
             globalMacros[globalMacros[macroSlot].key] = nil
             globalMacros[macroSlot] = nil
@@ -2740,6 +2763,10 @@ function TalentLoadouts:UpdateMacros()
                 name = name,
                 key = key,
             }
+
+            if charMacros[name] then
+                self.duplicates[name] = true
+            end
 
             charMacros[key] = macroSlot
             charMacros[name] = macroSlot
