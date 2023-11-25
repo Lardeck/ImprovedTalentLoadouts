@@ -586,6 +586,18 @@ function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
     end
 end
 
+local function LoadBlizzardLoadout(configID, currentSpecID, configInfo, categoryInfo)
+    C_ClassTalents.LoadConfig(configID, true)
+    C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, nil)
+    TalentLoadouts.pendingLoadout = configInfo
+    TalentLoadouts.pendingCategory = categoryInfo
+    TalentLoadouts.lastUpdated = nil
+    TalentLoadouts.lastUpdatedCategory = nil
+    TalentLoadouts:UpdateDropdownText()
+    TalentLoadouts:UpdateDataObj(configInfo)
+    TalentLoadouts:LoadGearAndLayout(configInfo)
+end
+
 local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     if not configInfo then return end
 
@@ -593,14 +605,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     local configID = configInfo.ID
 
     if ImprovedTalentLoadoutsDB.options.loadBlizzard and C_Traits.GetConfigInfo(configID) then
-        C_ClassTalents.LoadConfig(configID, true)
-        C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, configID)
-        TalentLoadouts.charDB.lastLoadout = configInfo.ID
-        TalentLoadouts.charDB[currentSpecID] = configInfo.ID
-        TalentLoadouts.charDB.lastCategory = categoryInfo
-        TalentLoadouts:UpdateDropdownText()
-        TalentLoadouts:UpdateDataObj(configInfo)
-        TalentLoadouts:LoadGearAndLayout(configInfo)
+        LoadBlizzardLoadout(configID, currentSpecID, configInfo, categoryInfo)
         return
     end
 
@@ -632,7 +637,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
                 LoadLoadout(self, configInfo, categoryInfo, true)
             end
         end
-    else
+    elseif configInfo.entryInfo then
         TalentLoadouts.pendingLoadout = configInfo
         TalentLoadouts.pendingCategory = categoryInfo
         TalentLoadouts.lastUpdated = nil
@@ -643,6 +648,8 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     
         TalentLoadouts:UpdateDropdownText()
         TalentLoadouts:UpdateDataObj()
+    elseif C_Traits.GetConfigInfo(configID) then
+        LoadBlizzardLoadout(configID, currentSpecID, configInfo, categoryInfo)
     end
 
     configInfo.error = nil
@@ -675,9 +682,12 @@ function TalentLoadouts:OnLoadoutSuccess()
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         C_Timer.After(0.25, function()
             TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
-            TalentLoadouts:UpdateCurrentExportString()
         end)
     end
+
+    C_Timer.After(0.25, function()
+        TalentLoadouts:UpdateCurrentExportString()
+    end)
 end
 
 function TalentLoadouts:OnUnknownLoadoutSuccess()
@@ -727,8 +737,15 @@ function TalentLoadouts:UpdateCurrentExportString()
     local configID = TalentLoadouts.charDB[self.specID]
     local configInfo = configID and self.globalDB.configIDs[self.specID][configID]
     if configInfo then
-        local exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+        local exportString, entryInfo
+        if not configInfo.entryInfo then
+            exportString, entryInfo = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID)
+        else
+            exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+        end
+
         configInfo.exportString = exportString
+        configInfo.entryInfo = configInfo.entryInfo or entryInfo
     end
 end
 
