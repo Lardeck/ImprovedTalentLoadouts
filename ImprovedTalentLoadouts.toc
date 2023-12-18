@@ -18,5 +18,5 @@ Libs\libdatabroker-1-1\LibDataBroker-1.1.lua
 
 API.lua
 Core.lua
+Actionbars.lua
 Dropdown.lua
-ImprovedTalentLoadouts.lua

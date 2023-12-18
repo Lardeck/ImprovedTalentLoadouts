@@ -2,7 +2,6 @@ local addonName, ITL = ...
 local ITL = LibStub("AceAddon-3.0"):NewAddon(ITL, addonName)
 
 -- Libs --
-local LibDDM = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 local LibDB = LibStub:GetLibrary("LibDataBroker-1.1")
@@ -218,4 +217,11 @@ function ITL:CheckForVersionUpdates()
     if currentVersion < 10 then
         print("refactor here")
     end
+end
+
+function ITL:Compress(tbl)
+    local serialized = LibSerialize:Serialize(tbl)
+    local compressed = LibDeflate:CompressDeflate(serialized)
+    
+    return compressed
 end
