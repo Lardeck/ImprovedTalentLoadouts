@@ -137,6 +137,7 @@ do
             TalentLoadouts:UpdateMacros()
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
             TalentLoadouts.charDB.lastCategory = nil
+            TalentLoadouts:UpdateKnownFlyouts()
             TalentLoadouts:UpdateSpecID(true)
             TalentLoadouts:UpdateActionBar()
             TalentLoadouts:UpdateDropdownText()
@@ -2816,7 +2817,7 @@ function TalentLoadouts:UpdateKnownFlyouts()
             for slotId = offset + 1, numSpells + offset do
                 local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
                 if spellType  and spellType == "FLYOUT" then
-                self.flyouts[id] = slotId
+                    self.flyouts[id] = slotId
                 end
             end
         end
