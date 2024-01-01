@@ -518,7 +518,13 @@ local function CommitLoadout()
     if configInfo then
         local activeConfigID = C_ClassTalents.GetActiveConfigID()
 
+        if not configInfo.entryInfo and configInfo.exportString then
+            configInfo.entryInfo = CreateEntryInfoFromString(configInfo.ID, configInfo.exportString)
+        end
+
         local entryInfo = configInfo.entryInfo
+        if not entryInfo then return end
+
         table.sort(entryInfo, function(a, b)
             local nodeA = C_Traits.GetNodeInfo(activeConfigID, a.nodeID)
             local nodeB = C_Traits.GetNodeInfo(activeConfigID, b.nodeID)
@@ -2556,7 +2562,7 @@ function TalentLoadouts:InitializeHooks()
 
         local customLoadouts
         for _, v in ITLAPI.EnumerateSpecLoadouts() do
-           if not v.default then
+           if not v.default and v.exportString then
               if customLoadouts then
                  customLoadouts = string.format("%s\n# Saved Loadout: %s\n# talents=%s", customLoadouts, v.name, v.exportString)
               else
