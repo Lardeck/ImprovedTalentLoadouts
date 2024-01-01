@@ -2357,9 +2357,13 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end
             end
 
-            for _, configID in ipairs(categoryInfo.loadouts) do
-                local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
-                if configInfo and not configInfo.default then
+            local categoryLoadouts = {}
+            for _, cID in ipairs(categoryInfo.loadouts) do
+                table.insert(categoryLoadouts, cID, true)
+            end
+
+            for configID, configInfo in iterateLoadouts() do
+                if categoryLoadouts[configID] ~= nil and configInfo and not configInfo.default then
                     local color = configInfo.fake and "|cFF33ff96" or "|cFFFFD100"
                     LibDD:UIDropDownMenu_AddButton(
                         {
