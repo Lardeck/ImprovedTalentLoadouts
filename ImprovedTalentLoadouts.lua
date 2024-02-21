@@ -1378,7 +1378,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
     local entryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
-    if entryInfo then
+    if entryInfo and #entryInfo > 40 then
         self.globalDB.configIDs[currentSpecID][fakeConfigID] = {
             ID = fakeConfigID,
             fake = true,
@@ -1391,7 +1391,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
             categories = category and {[category] = true} or {},
         }
     else
-        self:Print("Invalid import string.")
+        self:Print("Invalid import string. Try reloading.")
         return
     end
 
