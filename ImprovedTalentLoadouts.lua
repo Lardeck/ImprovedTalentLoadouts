@@ -1355,6 +1355,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
 local function ImportCustomLoadout(self, apply)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
     dialog.data = apply
+    dialog.data2 = 1
 end
 
 local function ImportCustomClassLoadout(self, apply)
