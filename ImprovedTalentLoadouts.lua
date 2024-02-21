@@ -1543,8 +1543,6 @@ function TalentLoadouts:UpdateActionBars(configInfo)
                 end
             elseif actionType == "spell" then
                 id = FindBaseSpellByID(id)
-            elseif actionType == "flyout" then
-                id = self.flyouts[id]
             end
 
             actionBars[actionSlot] = {
@@ -1582,6 +1580,7 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
     if not success then return end
 
     self:UpdateMacros()
+    self:UpdateKnownFlyouts()
 
     if not next(data) then return end
 
@@ -1619,10 +1618,17 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
                 end
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
-                PickupSpell(spellID)
+                if spellID then
+                    PickupSpell(spellID)
+                else
+                    C_MountJournal.Pickup(0)
+                end
+                pickedUp = true
+            elseif slotInfo.type == "companion" then
+                PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "flyout" then
-                PickupSpellBookItem(slotInfo.id, BOOKTYPE_SPELL)
+                PickupSpellBookItem(self.flyouts[slotInfo.id], BOOKTYPE_SPELL)
                 pickedUp = true
             elseif slotInfo.type == "item" then
                 PickupItem(slotInfo.id)
