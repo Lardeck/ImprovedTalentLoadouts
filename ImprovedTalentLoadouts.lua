@@ -256,6 +256,8 @@ function TalentLoadouts:CheckForDBUpdates()
         ["loadBlizzard"] = false,
         ["showCategoryName"] = false,
         ["sortLoadoutsByName"] = false,
+        ["sortCategoriesByName"] = false,
+        ["sortSubcategoriesByName"] = false,
         ["loadActionbarsSpec"] = false,
         ["loadAsBlizzard"] = true,
         ["useAddOnLoadoutFallback"] = false,
@@ -308,13 +310,24 @@ function TalentLoadouts:UpdateActionBar()
     end
 end
 
-function TalentLoadouts:UpdateIterator()
+function TalentLoadouts:UpdateLoadoutIterator()
+    local currentSpecID = PlayerUtil.GetCurrentSpecID()
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
-        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[self.specID] or {}, sortByName)
+        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByName)
     else
-        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[self.specID] or {})
+        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {})
     end
 end
+
+function TalentLoadouts:UpdateCategoryIterator()
+    local currentSpecID = PlayerUtil.GetCurrentSpecID()
+    if ImprovedTalentLoadoutsDB.options.sortCategoriesByName then
+        iterateCategories = GenerateClosure(spairs, TalentLoadouts.globalDB.categories[currentSpecID] or {}, sortByName)
+    else
+        iterateCategories = GenerateClosure(pairs, TalentLoadouts.globalDB.categories[currentSpecID] or {})
+    end
+end
+
 
 -- WIP, Wasn't able to reproduce the issue of empty loadout info
 local function CreateEntryInfoFromString(configID, exportString, treeID, repeating)
@@ -1882,14 +1895,15 @@ local categoryFunctions = {
 }
 
 local function LoadoutDropdownInitialize(_, level, menu, ...)
-    local currentSpecID = TalentLoadouts.specID
+    local currentSpecID = PlayerUtil.GetCurrentSpecID()
     if level == 1 then
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
         TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
-        TalentLoadouts:UpdateIterator()
+        TalentLoadouts:UpdateLoadoutIterator()
+        TalentLoadouts:UpdateCategoryIterator()
 
         
-        for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], sortByName) do
+        for _, categoryInfo in iterateCategories() do
             if not categoryInfo.isSubCategory then
                 LibDD:UIDropDownMenu_AddButton(
                         {
@@ -2141,10 +2155,41 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.sortLoadoutsByName = not ImprovedTalentLoadoutsDB.options.sortLoadoutsByName
-                    TalentLoadouts:UpdateIterator()
+                    TalentLoadouts:UpdateLoadoutIterator()
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.sortLoadoutsByName
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Sort Categories by Name",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.sortCategoriesByName = not ImprovedTalentLoadoutsDB.options.sortCategoriesByName
+                    TalentLoadouts:UpdateCategoryIterator()
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.sortCategoriesByName
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Sort Subcategories by Name",
+                isNotRadio = true,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName = not ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName
                 end
             },
         level)
@@ -2420,7 +2465,9 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
         local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][L_UIDROPDOWNMENU_MENU_VALUE.key]
         if categoryInfo then
             if categoryInfo.categories then
-                for _, categoryKey in ipairs(categoryInfo.categories) do
+                local sort = ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName
+                local iterator = GenerateClosure(sort and spairs or ipairs, categoryInfo.categories, sort and sortByValue or nil)
+                for _, categoryKey in iterator() do
                     local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
                     if categoryInfo and categoryInfo.name then
                         LibDD:UIDropDownMenu_AddButton(
@@ -2511,8 +2558,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
     elseif menu == "addToCategory" then
         local isCategory = type(L_UIDROPDOWNMENU_MENU_VALUE) == "table"
 
-        for _, categoryInfo in spairs(TalentLoadouts.globalDB.categories[currentSpecID], 
-        function(t, a, b) if t[a] and t[b] and t[a].name and t[b].name then return t[a].name < t[b].name end end) do
+        for _, categoryInfo in iterateCategories() do
             if not isCategory or categoryInfo.key ~= L_UIDROPDOWNMENU_MENU_VALUE.key then
                 LibDD:UIDropDownMenu_AddButton(
                         {
