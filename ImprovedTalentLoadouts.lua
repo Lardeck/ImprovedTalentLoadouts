@@ -13,7 +13,7 @@ local dataObjText = "ITL: %s, %s"
 local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL: Spec, Loadout"})
 
 local dropdownFont = CreateFont("ITL_DropdownFont")
-local iterateLoadouts
+local iterateLoadouts, iterateCategories
 
 --- Create an iterator for a hash table.
 -- @param t:table The table to create the iterator for.
@@ -48,6 +48,18 @@ end
 local function sortByName(t, a, b)
     if t[a] and t[b] and t[a].name and t[b].name then
         return t[a].name < t[b].name
+    end
+end
+
+local function sortByValue(t, a, b)
+    if t[a] and t[b] then
+        return t[a] < t[b]
+    end
+end
+
+local function sortByKey(t, a, b)
+    if a and b then
+        return a < b
     end
 end
 
@@ -143,7 +155,8 @@ do
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
-            TalentLoadouts:UpdateIterator()
+            TalentLoadouts:UpdateLoadoutIterator()
+            TalentLoadouts:UpdateCategoryIterator()
         elseif event == "CONFIG_COMMIT_FAILED" then
             C_Timer.After(0.1, function()
                 if (TalentLoadouts.pendingLoadout and not UnitCastingInfo("player")) or TalentLoadouts.lastUpdated then
@@ -206,7 +219,6 @@ function TalentLoadouts:InitializeCharacterDB()
     self:CheckForVersionUpdates()
     self.initialized = true
     self:UpdateMacros()
-    self:UpdateIterator()
 end
 
 -- Not sure how that can happen but apparently it was a problem for someone. Maybe there is another AddOn that overwrites my db?
@@ -1300,13 +1312,13 @@ end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
     text = "Loadout Import String",
-    button1 = "Import",
+    button1 = "Accept",
     button2 = "Cancel",
-    OnAccept = function(self, apply, treeType)
+    OnAccept = function(self, data)
+        local treeType, categoryInfo = unpack(data)
         local importString = self.editBox:GetText()
         local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
-        dialog.data = {importString, treeType}
-        dialog.data2 = apply
+        dialog.data = {treeType, importString, categoryInfo}
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -1319,27 +1331,44 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
     hideOnEscape = true,
 }
 
+
+-- action = 1 -> do nothing
+-- action = 2 -> import
+-- action = 3 -> import + apply
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     text = "Loadout Import Name",
     button1 = "Import",
-    button2 = "Cancel",
-    OnAccept = function(self, data, apply)
-        local importString, treeType = unpack(data)
-        local loadoutName = self.editBox:GetText()
-        local fakeConfigID
-        if not treeType or treeType == 1 then
-            fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName)
-        elseif treeType == 2 then
-            loadoutName = string.format("[C] %s", loadoutName)
-            fakeConfigID = TalentLoadouts:ImportClassLoadout(importString, loadoutName)
-        elseif treeType == 3 then
-            loadoutName = string.format("[S] %s", loadoutName)
-            fakeConfigID = TalentLoadouts:ImportSpecLoadout(importString, loadoutName)
-        end
+    button2 = "Import + Apply",
+    button3 = "Cancel",
+    OnShow = function(self)
+        self.action = 1
+    end,
+    OnAccept = function(self)
+        self.action = 2
+    end,
+    OnCancel = function(self)
+        self.action = 3
+    end,
+    OnHide = function(self, data)
+        if self.action > 1 then
+            local treeType, importString, categoryInfo = unpack(data)
+            local loadoutName = self.editBox:GetText()
+            local fakeConfigID
+            if not treeType or treeType == 1 then
+                fakeConfigID = TalentLoadouts:ImportLoadout(importString, loadoutName, categoryInfo and categoryInfo.key)
+            elseif treeType == 2 then
+                loadoutName = string.format("[C] %s", loadoutName)
+                fakeConfigID = TalentLoadouts:ImportClassLoadout(importString, loadoutName, categoryInfo and categoryInfo.key)
+            elseif treeType == 3 then
+                loadoutName = string.format("[S] %s", loadoutName)
+                fakeConfigID = TalentLoadouts:ImportSpecLoadout(importString, loadoutName, categoryInfo and categoryInfo.key)
+            end
 
-        if fakeConfigID and apply then
-            LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][fakeConfigID])
+            if fakeConfigID and self.action == 3 then
+                LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][fakeConfigID], categoryInfo)
+            end
         end
+        self.apply = nil
     end,
     timeout = 0,
     EditBoxOnEnterPressed = function(self)
@@ -1352,26 +1381,13 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     hideOnEscape = true,
 }
 
-local function ImportCustomLoadout(self, apply)
+local function ImportCustomLoadout(self, treeType, categoryInfo)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
-    dialog.data = apply
-    dialog.data2 = 1
+    dialog.data = {treeType, categoryInfo}
 end
 
-local function ImportCustomClassLoadout(self, apply)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
-    dialog.data = apply
-    dialog.data2 = 2
-end
-
-local function ImportCustomSpecLoadout(self, apply)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
-    dialog.data = apply
-    dialog.data2 = 3
-end
-
-function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
-    local currentSpecID = self.specID
+function TalentLoadouts:ImportLoadout(importString, loadoutName, categoryKey)
+    local currentSpecID = PlayerUtil.GetCurrentSpecID()
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
@@ -1388,8 +1404,12 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
             exportString = importString,
             entryInfo = entryInfo,
             usesSharedActionBars = true,
-            categories = category and {[category] = true} or {},
+            categories = categoryKey and {[categoryKey] = true} or {},
         }
+
+        if categoryKey then
+            tInsertUnique(TalentLoadouts.globalDB.categories[currentSpecID][categoryKey].loadouts, fakeConfigID)
+        end
     else
         self:Print("Invalid import string. Try reloading.")
         return
@@ -1398,7 +1418,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, category)
     return fakeConfigID
 end
 
-function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, category)
+function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, categoryKey)
     local currentSpecID = self.specID
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
@@ -1426,8 +1446,12 @@ function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, category)
             exportString = importString,
             entryInfo = specEntryInfo,
             usesSharedActionBars = true,
-            categories = category and {[category] = true} or {},
+            categories = categoryKey and {[categoryKey] = true} or {},
         }
+
+        if categoryKey then
+            tInsertUnique(TalentLoadouts.globalDB.categories[currentSpecID][categoryKey].loadouts, fakeConfigID)
+        end
     else
         self:Print("Invalid import string.")
         return
@@ -1436,7 +1460,7 @@ function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, category)
     return fakeConfigID
 end
 
-function TalentLoadouts:ImportClassLoadout(importString, loadoutName, category)
+function TalentLoadouts:ImportClassLoadout(importString, loadoutName, categoryKey)
     local currentSpecID = self.specID
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
@@ -1464,8 +1488,12 @@ function TalentLoadouts:ImportClassLoadout(importString, loadoutName, category)
             exportString = importString,
             entryInfo = classEntryInfo,
             usesSharedActionBars = true,
-            categories = category and {[category] = true} or {},
+            categories = categoryKey and {[categoryKey] = true} or {},
         }
+
+        if categoryKey then
+            tInsertUnique(TalentLoadouts.globalDB.categories[currentSpecID][categoryKey].loadouts, fakeConfigID)
+        end
     else
         self:Print("Invalid import string.")
         return
@@ -1721,6 +1749,29 @@ function TalentLoadouts:DeleteAllLoadouts()
     LibDD.CloseDropDownMenus()
 end
 
+function TalentLoadouts:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel)
+    if not categoryInfo.categories then return end
+
+    for _, categoryKey in ipairs(categoryInfo.categories) do
+        local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                arg2 = categoryInfo,
+                text = string.format("%sto |cFF34ebe1%s|r", string.rep(" ", subCategoryLevel * 5), categoryInfo.name),
+                minWidth = 170,
+                func = ImportCustomLoadout,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+            },
+        dropdownLevel)
+        
+        if categoryInfo.categories and #categoryInfo.categories > 0 then
+            self:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel + 1)
+        end
+    end
+end
+
 local loadoutFunctions = {
     assignGearset = {
         name = "Assign Gearset",
@@ -1904,6 +1955,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                arg1 = 1,
                 text = "Import Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
@@ -1985,47 +2037,69 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             },
         level)
     elseif menu == "importLoadout" then
+        local categories = TalentLoadouts.globalDB.categories[currentSpecID]
+        local hasCategory = next(categories) ~= nil
+
         LibDD:UIDropDownMenu_AddButton(
             {
+                value = 1,
+                arg1 = 1,
                 text = "Import Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "importLoadoutToCategory"
             },
         level)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Import Loadout + Apply",
-                arg1 = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                notCheckable = 1,
-                func = ImportCustomLoadout,
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
+                value = 2,
+                arg1 = 2,
                 text = "Import Class Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = ImportCustomClassLoadout,
+                func = ImportCustomLoadout,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "importLoadoutToCategory"
             },
         level)
         
         LibDD:UIDropDownMenu_AddButton(
             {
+                value = 3,
+                arg1 = 3,
                 text = "Import Spec Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = ImportCustomSpecLoadout,
+                func = ImportCustomLoadout,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "importLoadoutToCategory"
             },
         level)
+    elseif menu == "importLoadoutToCategory" then
+        -- L_UIDROPDOWNMENU_MENU_VALUE
+        for _, categoryInfo in iterateCategories() do
+            if not categoryInfo.isSubCategory then
+                LibDD:UIDropDownMenu_AddButton(
+                        {
+                            arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                            arg2 = categoryInfo,
+                            text = string.format("to |cFF34ebe1%s|r", categoryInfo.name),
+                            minWidth = 170,
+                            func = ImportCustomLoadout,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                        },
+                level)
 
+                TalentLoadouts:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, level, 1)
+            end
+        end
     elseif menu == "options" then
         LibDD:UIDropDownMenu_AddButton(
             {
