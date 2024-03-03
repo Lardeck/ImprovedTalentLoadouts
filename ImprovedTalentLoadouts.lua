@@ -118,13 +118,14 @@ do
                 TalentLoadouts:Initialize()
             elseif arg1 == talentUI then
                 self:UnregisterEvent("ADDON_LOADED")
-                TalentLoadouts:InitializeTalentLoadouts()
                 TalentLoadouts:UpdateSpecID()
+                TalentLoadouts:InitializeTalentLoadouts()
                 TalentLoadouts:InitializeDropdown()
                 TalentLoadouts:InitializeButtons()
                 TalentLoadouts:InitializeHooks()
+
             end
-        elseif event == "PLAYER_ENTERING_WORLD" then
+        elseif event == "PLAYER_ENTERING_WORLD" and (arg1 or arg2) then
             TalentLoadouts:InitializeCharacterDB()
             TalentLoadouts:SaveCurrentLoadouts()
             TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
@@ -288,7 +289,7 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     end
 
     self.specID = PlayerUtil.GetCurrentSpecID()
-    self.treeID = securecall(ClassTalentFrame.TalentsTab.GetTalentTreeID, ClassTalentFrame.TalentsTab)
+    self.treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
 
     if isRespec then
         self.charDB.lastLoadout = nil
@@ -311,7 +312,7 @@ function TalentLoadouts:UpdateActionBar()
 end
 
 function TalentLoadouts:UpdateLoadoutIterator()
-    local currentSpecID = PlayerUtil.GetCurrentSpecID()
+    local currentSpecID = self.specID
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
         iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByName)
     else
@@ -320,7 +321,7 @@ function TalentLoadouts:UpdateLoadoutIterator()
 end
 
 function TalentLoadouts:UpdateCategoryIterator()
-    local currentSpecID = PlayerUtil.GetCurrentSpecID()
+    local currentSpecID = self.specID
     if ImprovedTalentLoadoutsDB.options.sortCategoriesByName then
         iterateCategories = GenerateClosure(spairs, TalentLoadouts.globalDB.categories[currentSpecID] or {}, sortByName)
     else
@@ -332,7 +333,7 @@ end
 -- WIP, Wasn't able to reproduce the issue of empty loadout info
 local function CreateEntryInfoFromString(configID, exportString, treeID, repeating)
     configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
-    local treeID = securecall(ClassTalentFrame.TalentsTab.GetTalentTreeID, ClassTalentFrame.TalentsTab)
+    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
@@ -348,7 +349,7 @@ local function CreateEntryInfoFromString(configID, exportString, treeID, repeati
 end
 
 local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
-    local treeID = (configInfo and configInfo.treeIDs[1]) or securecall(ClassTalentFrame.TalentsTab.GetTalentTreeID, ClassTalentFrame.TalentsTab)
+    local treeID = (configInfo and configInfo.treeIDs[1]) or ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local treeHash = treeID and C_Traits.GetTreeHash(treeID);
 
     if treeID and treeID == TalentLoadouts.treeID then
@@ -1227,7 +1228,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
         local currentSpecID = TalentLoadouts.specID
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
         if configInfo then
-            local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+            local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
             local entryInfo = CreateEntryInfoFromString(configID, importString, treeID)
         
             if entryInfo then
@@ -1394,17 +1395,17 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
     hideOnEscape = true,
 }
 
-local function ImportCustomLoadout(self, treeType, categoryInfo)
+local function ImportCustomLoadout(self, treeType, categoryInfo, entryInfo)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
     dialog.data = {treeType, categoryInfo}
 end
 
 function TalentLoadouts:ImportLoadout(importString, loadoutName, categoryKey)
-    local currentSpecID = PlayerUtil.GetCurrentSpecID()
+    local currentSpecID = self.specID
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
-    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local entryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
     if entryInfo and #entryInfo > 40 then
@@ -1436,7 +1437,7 @@ function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, categoryKey
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
-    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local loadoutEntryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
     if loadoutEntryInfo then
@@ -1479,7 +1480,7 @@ function TalentLoadouts:ImportClassLoadout(importString, loadoutName, categoryKe
     if not fakeConfigID then return end
 
     local configID = C_ClassTalents.GetActiveConfigID()
-    local treeID = securecallfunction(ClassTalentFrame.TalentsTab.GetTreeInfo, ClassTalentFrame.TalentsTab).ID
+    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
     local loadoutEntryInfo = CreateEntryInfoFromString(configID, importString, treeID)
 
     if loadoutEntryInfo then
@@ -1762,7 +1763,7 @@ function TalentLoadouts:DeleteAllLoadouts()
     LibDD.CloseDropDownMenus()
 end
 
-function TalentLoadouts:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel)
+function TalentLoadouts:AddSubCategoriesToImportDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel)
     if not categoryInfo.categories then return end
 
     for _, categoryKey in ipairs(categoryInfo.categories) do
@@ -1895,7 +1896,8 @@ local categoryFunctions = {
 }
 
 local function LoadoutDropdownInitialize(_, level, menu, ...)
-    local currentSpecID = PlayerUtil.GetCurrentSpecID()
+    TalentLoadouts:UpdateSpecID()
+    local currentSpecID = TalentLoadouts.specID
     if level == 1 then
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
         TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
