@@ -292,6 +292,7 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     self.treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
 
     if isRespec then
+        StaticPopup_Hide("TALENTLOADOUTS_LOADOUT_DELETE_ALL")
         self.charDB.lastLoadout = nil
     end
 end
