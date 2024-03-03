@@ -1143,13 +1143,15 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     local exportString
     if isInspecting then
         local unit = ClassTalentFrame:GetInspectUnit()
-        if unit then
+        if unit and GetInspectSpecialization(unit) == self.specID then
             exportString = C_Traits.GenerateInspectImportString(unit)
         end
     end
 
     if not isInspecting or exportString then
         return self:ImportLoadout(exportString or self:GetExportStringForTree(), loadoutName, categoryInfo and categoryInfo.key)
+    elseif isInspecting and not exportString then
+        TalentLoadouts:Print("Unable to generate the export string. Make sure the specialization of the inspected unit is equalt to your current one.")
     end
  end
 
