@@ -689,6 +689,10 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     LibDD:CloseDropDownMenus()
 end
 
+local function LoadLoadoutByConfigID(configID, categoryInfo)
+    LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][configID], categoryInfo)
+end
+
 function TalentLoadouts:OnLoadoutSuccess()
     local configInfo = TalentLoadouts.pendingLoadout
     local categoryInfo = TalentLoadouts.pendingCategory
@@ -1087,16 +1091,34 @@ end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     text = "Loadout Name",
-    button1 = "Save",
-    button2 = "Cancel",
-    OnAccept = function(self, saveType, apply)
-        local loadoutName = self.editBox:GetText()
-        if saveType == 1 then
-            TalentLoadouts:SaveCurrentLoadout(loadoutName, nil, apply)
-        elseif saveType == 2 then
-            TalentLoadouts:SaveCurrentClassTree(loadoutName)
-        elseif saveType == 3 then
-            TalentLoadouts:SaveCurrentSpecTree(loadoutName)
+    button1 = "Create",
+    button2 = "Create + Apply",
+    button3 = "Cancel",
+    OnShow = function(self)
+        self.action = 1
+    end,
+    OnAccept = function(self)
+        self.action = 2
+    end,
+    OnCancel = function(self)
+        self.action = 3
+    end,
+    OnHide = function(self, data)
+        if self.action > 1 then
+            local treeType, categoryInfo = unpack(data)
+            local loadoutName = self.editBox:GetText()
+            local fakeConfigID
+            if treeType == 1 then
+                fakeConfigID = TalentLoadouts:SaveCurrentTree(loadoutName, categoryInfo)
+            elseif treeType == 2 then
+                fakeConfigID = TalentLoadouts:SaveCurrentClassTree(loadoutName, categoryInfo)
+            elseif treeType == 3 then
+                fakeConfigID = TalentLoadouts:SaveCurrentSpecTree(loadoutName, categoryInfo)
+            end
+
+            if fakeConfigID and self.action == 3 then
+                LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
+            end
         end
     end,
     timeout = 0,
@@ -1110,74 +1132,34 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     hideOnEscape = true,
  }
 
- local function SaveCurrentLoadout(self, apply)
+ local function SaveCurrentTree(self, treeType, categoryInfo)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
-    dialog.data = 1
-    dialog.data2 = apply
+    dialog.data = {treeType, categoryInfo}
  end
 
- local function SaveCurrentClassTree()
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
-    dialog.data = 2
- end
-
- local function SaveCurrentSpecTree()
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
-    dialog.data = 3
- end
-
- function TalentLoadouts:SaveCurrentLoadout(loadoutName, currencyID, apply, treeType)
-    local currentSpecID = self.specID
-    local activeConfigID = C_ClassTalents.GetActiveConfigID()
-    local fakeConfigID = FindFreeConfigID()
-    if not fakeConfigID then return end
-
-    self.globalDB.configIDs[currentSpecID][fakeConfigID] = C_Traits.GetConfigInfo(activeConfigID)
-
-    local configInfo = self.globalDB.configIDs[currentSpecID][fakeConfigID]
-    configInfo.fake = true
-    configInfo.type = treeType or 1
-    configInfo.name = loadoutName
-    configInfo.ID = fakeConfigID
-    configInfo.currencyID = currencyID
-    configInfo.categories = {}
-
-    local isInspecting = securecall(ClassTalentFrame.TalentsTab.IsInspecting, ClassTalentFrame.TalentsTab)
+ function TalentLoadouts:SaveCurrentTree(loadoutName, categoryInfo)
+    local isInspecting = ClassTalentFrame.TalentsTab:IsInspecting()
+    local exportString
     if isInspecting then
-        local treeID = configInfo.treeIDs[1]
-        local unit = securecall(ClassTalentFrame.GetInspectUnit, ClassTalentFrame)
+        local unit = ClassTalentFrame:GetInspectUnit()
         if unit then
-            local exportString = C_Traits.GenerateInspectImportString(unit)
-            configInfo.exportString, configInfo.entryInfo, configInfo.treeHash = exportString, CreateEntryInfoFromString(activeConfigID, exportString, treeID), C_Traits.GetTreeHash(treeID)
-            return
+            exportString = C_Traits.GenerateInspectImportString(unit)
         end
-    else
-        self:InitializeTalentLoadout(fakeConfigID)
     end
 
-    if not C_Traits.ConfigHasStagedChanges(activeConfigID) then
-        if currencyID then
-            self.charDB.lastClassLoadout = fakeConfigID
-        else
-            self.charDB.lastLoadout = fakeConfigID
-            self.charDB[currentSpecID] = fakeConfigID
-        end
-
-        TalentLoadouts:UpdateDropdownText()
-        TalentLoadouts:UpdateDataObj(self.globalDB.configIDs[currentSpecID][fakeConfigID])
-    elseif apply then
-        LoadLoadout(nil, configInfo)
+    if not isInspecting or exportString then
+        return self:ImportLoadout(exportString or self:GetExportStringForTree(), loadoutName, categoryInfo and categoryInfo.key)
     end
  end
 
- function TalentLoadouts:SaveCurrentClassTree(loadoutName)
+ function TalentLoadouts:SaveCurrentClassTree(loadoutName, categoryInfo)
     loadoutName = string.format("[C] %s", loadoutName)
-    self:ImportClassLoadout(self:GetExportStringForTree(), loadoutName)
+    return self:ImportClassLoadout(self:GetExportStringForTree(), loadoutName, categoryInfo and categoryInfo.key)
  end
 
- function TalentLoadouts:SaveCurrentSpecTree(loadoutName)
+ function TalentLoadouts:SaveCurrentSpecTree(loadoutName, categoryInfo)
     loadoutName = string.format("[S] %s", loadoutName)
-    self:ImportSpecLoadout(self:GetExportStringForTree(), loadoutName)
+    return self:ImportSpecLoadout(self:GetExportStringForTree(), loadoutName, categoryInfo and categoryInfo.key)
  end
 
  local function UpdateWithCurrentTree(self, configID, categoryInfo, isButtonUpdate)
@@ -1379,7 +1361,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
             end
 
             if fakeConfigID and self.action == 3 then
-                LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][fakeConfigID], categoryInfo)
+                LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
             end
         end
         self.apply = nil
@@ -1781,7 +1763,30 @@ function TalentLoadouts:AddSubCategoriesToImportDropdown(categoryInfo, currentSp
         dropdownLevel)
         
         if categoryInfo.categories and #categoryInfo.categories > 0 then
-            self:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel + 1)
+            self:AddSubCategoriesToImportDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel + 1)
+        end
+    end
+end
+
+function TalentLoadouts:AddSubCategoriesToCreateDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel)
+    if not categoryInfo.categories then return end
+
+    for _, categoryKey in ipairs(categoryInfo.categories) do
+        local categoryInfo = TalentLoadouts.globalDB.categories[currentSpecID][categoryKey]
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                arg2 = categoryInfo,
+                text = string.format("%sto |cFF34ebe1%s|r", string.rep(" ", subCategoryLevel * 5), categoryInfo.name),
+                minWidth = 170,
+                func = SaveCurrentTree,
+                fontObject = dropdownFont,
+                notCheckable = 1,
+            },
+        dropdownLevel)
+        
+        if categoryInfo.categories and #categoryInfo.categories > 0 then
+            self:AddSubCategoriesToCreateDropdown(categoryInfo, currentSpecID, dropdownLevel, subCategoryLevel + 1)
         end
     end
 end
@@ -1959,12 +1964,13 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                arg1 = 1,
                 text = "Create Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 hasArrow = true,
                 notCheckable = 1,
-                func = SaveCurrentLoadout,
+                func = SaveCurrentTree,
                 menuList = "createLoadout"
             },
         level)
@@ -2012,44 +2018,48 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             },
         level)
     elseif menu == "createLoadout" then
+        local categories = TalentLoadouts.globalDB.categories[currentSpecID]
+        local hasCategory = next(categories) ~= nil
+
         LibDD:UIDropDownMenu_AddButton(
             {
+                value = 1,
+                arg1 = 1,
                 text = "Create Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = SaveCurrentLoadout,
+                func = SaveCurrentTree,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "createLoadoutToCategory"
             },
         level)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Create Loadout + Apply",
-                arg1 = true,
-                minWidth = 170,
-                fontObject = dropdownFont,
-                notCheckable = 1,
-                func = SaveCurrentLoadout,
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
+                value = 2,
+                arg1 = 2,
                 text = "Create Class Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = SaveCurrentClassTree,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "createLoadoutToCategory"
             },
         level)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                value = 3,
+                arg1 = 3,
                 text = "Create Spec Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = SaveCurrentSpecTree,
+                hasArrow = hasCategory,
+                menuList = hasCategory and "createLoadoutToCategory"
             },
         level)
     elseif menu == "importLoadout" then
@@ -2113,7 +2123,26 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                         },
                 level)
 
-                TalentLoadouts:AddSubCategoriesToDropdown(categoryInfo, currentSpecID, level, 1)
+                TalentLoadouts:AddSubCategoriesToImportDropdown(categoryInfo, currentSpecID, level, 1)
+            end
+        end
+    elseif menu == "createLoadoutToCategory" then
+        -- L_UIDROPDOWNMENU_MENU_VALUE
+        for _, categoryInfo in iterateCategories() do
+            if not categoryInfo.isSubCategory then
+                LibDD:UIDropDownMenu_AddButton(
+                        {
+                            arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                            arg2 = categoryInfo,
+                            text = string.format("to |cFF34ebe1%s|r", categoryInfo.name),
+                            minWidth = 170,
+                            func = SaveCurrentTree,
+                            fontObject = dropdownFont,
+                            notCheckable = 1,
+                        },
+                level)
+
+                TalentLoadouts:AddSubCategoriesToCreateDropdown(categoryInfo, currentSpecID, level, 1)
             end
         end
     elseif menu == "options" then
