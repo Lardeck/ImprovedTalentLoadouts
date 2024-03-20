@@ -2046,7 +2046,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = SaveCurrentClassTree,
+                func = SaveCurrentTree,
                 hasArrow = hasCategory,
                 menuList = hasCategory and "createLoadoutToCategory"
             },
@@ -2060,7 +2060,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
-                func = SaveCurrentSpecTree,
+                func = SaveCurrentTree,
                 hasArrow = hasCategory,
                 menuList = hasCategory and "createLoadoutToCategory"
             },
