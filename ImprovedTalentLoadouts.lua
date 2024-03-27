@@ -2578,13 +2578,12 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
             for configID, configInfo in iterateLoadouts() do
                 if categoryLoadouts[configID] ~= nil and configInfo and not configInfo.default then
-                    local color = configInfo.fake and "|cFF33ff96" or "|cFFFFD100"
                     LibDD:UIDropDownMenu_AddButton(
                         {
                             arg1 = configInfo,
                             arg2 = categoryInfo,
                             value = {configID, categoryInfo},
-                            colorCode = color,
+                            colorCode = "|cFF33ff96",
                             text = configInfo.name,
                             minWidth = 170,
                             fontObject = dropdownFont,
