@@ -1551,6 +1551,19 @@ local function ExportLoadout(self, configID)
     end
 end
 
+local function PostInChat(self, configID)
+    local currentSpecID = TalentLoadouts.specID
+    local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if configInfo then
+        local linkDisplayText = ("[%s - %s]"):format(TALENT_BUILD_CHAT_LINK_TEXT:format(PlayerUtil.GetSpecName(), PlayerUtil.GetClassName()), configInfo.name);
+        local linkText = LinkUtil.FormatLink("talentbuild", linkDisplayText, currentSpecID, UnitLevel("player"), configInfo.exportString);
+        local chatLink = PlayerUtil.GetClassColor():WrapTextInColorCode(linkText);
+        if not ChatEdit_InsertLink(chatLink) then
+            ChatFrame_OpenChat(chatLink);
+        end
+    end
+end
+
 local function UpdateActionBars(self, configID)
     local currentSpecID = TalentLoadouts.specID
     local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
@@ -1567,10 +1580,7 @@ local function RemoveActionBars(self, configID)
     end
 end
 
-function TalentLoadouts:UpdateActionBars(configInfo)
-    self:UpdateKnownFlyouts()
-
-    configInfo.actionBars = configInfo.actionBars or {}
+function TalentLoadouts:GetCurrentActionBarsCompressed()
     local actionBars = {}
 
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
@@ -1611,7 +1621,19 @@ function TalentLoadouts:UpdateActionBars(configInfo)
     if next(actionBars) then
         local serialized = LibSerialize:Serialize(actionBars)
         local compressed = LibDeflate:CompressDeflate(serialized)
-        configInfo.actionBars = compressed
+
+        return compressed
+    end
+end
+
+function TalentLoadouts:UpdateActionBars(configInfo)
+    self:UpdateKnownFlyouts()
+
+    configInfo.actionBars = configInfo.actionBars or {}
+    local actionBars = self:GetCurrentActionBarsCompressed()
+
+    if actionBars then
+        configInfo.actionBars = actionBars
     end
 end
 
@@ -1886,6 +1908,11 @@ local loadoutFunctions = {
         func = RemoveFromSpecificCategory,
         notCheckable = true,
         level = 3,
+    },
+    postInChat = {
+        name = "Post in Chat",
+        func = PostInChat,
+        notCheckable = true,
     }
 }
 
