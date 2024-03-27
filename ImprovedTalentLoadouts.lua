@@ -2823,6 +2823,11 @@ function TalentLoadouts:InitializeDropdown()
     LibDD:UIDropDownMenu_Initialize(dropdown, LoadoutDropdownInitialize)
     LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
     self:UpdateDropdownText()
+
+    if IsAddOnLoaded('ElvUI') then
+        ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
+        LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
+    end
 end
 
 local function CreateTextSpecButton(width, specIndex, _, specName)
@@ -2835,7 +2840,12 @@ local function CreateTextSpecButton(width, specIndex, _, specName)
     else
         specButton:SetText(specName)
     end
-    specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
+    PixelUtil.SetPoint(specButton,"LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
+
+    if IsAddOnLoaded('ElvUI') then
+        ElvUI[1]:GetModule('Skins'):HandleButton(specButton)
+        specButton:SetSize(width - 2, 25)
+    end
     return specButton
 end
 
@@ -2922,6 +2932,12 @@ function TalentLoadouts:InitializeButtons()
             UpdateActionBars(nil, TalentLoadouts.charDB.lastLoadout)
         end
     end)
+
+    if IsAddOnLoaded('ElvUI') then
+        ElvUI[1]:GetModule('Skins'):HandleButton(saveButton)
+        saveButton:SetHeight(22)
+        saveButton:AdjustPointsOffset(4, 1)
+    end
 
     self.specButtons = {}
     if ImprovedTalentLoadoutsDB.options.showSpecButtons then
