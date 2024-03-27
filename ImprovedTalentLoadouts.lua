@@ -2038,6 +2038,17 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Options",
+                notCheckable = 1,
+                hasArrow = true,
+                fontObject = dropdownFont,
+                minWidth = 170,
+                menuList = "options"
+            }
+        )
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Close",
                 minWidth = 170,
                 fontObject = dropdownFont,
@@ -2451,13 +2462,13 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Load Blizzard Loadouts (yellow)",
+                text = "Load Blizzard Loadouts",
                 isNotRadio = true,
                 minWidth = 170,
                 fontObject = dropdownFont,
                 tooltipOnButton = 1,
                 tooltipTitle = "Load Blizzard Loadouts",
-                tooltipText = "Load the yellow loadouts (if they exists) with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn for the yellow loadouts.",
+                tooltipText = "Load loadouts which also exists in the Blizzard dropdown with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn",
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
                 end,
@@ -2469,9 +2480,12 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Load as Blizzard Loadout",
+                text = "Use Blizzard Loading Method",
                 isNotRadio = true,
                 minWidth = 170,
+                tooltipOnButton = 1,
+                tooltipTitle = "",
+                tooltipText = "|cffff0000It is recommended to enable this option to avoid some actionbar related bugs which cannot be fixed. This uses the [ITL] Temp loadout.|r",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadAsBlizzard = not ImprovedTalentLoadoutsDB.options.loadAsBlizzard
