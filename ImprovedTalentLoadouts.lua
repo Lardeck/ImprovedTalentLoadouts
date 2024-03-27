@@ -248,6 +248,8 @@ function TalentLoadouts:CheckDBIntegrity()
         local playerName = GetPlayerName()
         self.charDB = ImprovedTalentLoadoutsDB.loadouts.characterLoadouts[playerName]
     end
+
+    self.charDB.cachedActionbars = self.charDB.cachedActionbars or {}
 end
 
 function TalentLoadouts:CheckForDBUpdates()
@@ -657,6 +659,8 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
         local tempLoadoutInfo = TalentLoadouts.charDB.tempLoadout and C_Traits.GetConfigInfo(TalentLoadouts.charDB.tempLoadout)
         local canCreate = C_ClassTalents.CanCreateNewConfig()
         if (tempLoadoutInfo or canCreate) and TalentLoadouts.charDB.lastLoadout ~= configInfo.ID then
+            TalentLoadouts:CacheActionBars()
+
             TalentLoadouts.pendingLoadout = configInfo
             TalentLoadouts.pendingCategory = categoryInfo
             TalentLoadouts.lastUpdated = nil
@@ -682,6 +686,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
             end
         end
     elseif configInfo.entryInfo then
+        TalentLoadouts:CacheActionBars()
         TalentLoadouts.pendingLoadout = configInfo
         TalentLoadouts.pendingCategory = categoryInfo
         TalentLoadouts.lastUpdated = nil
@@ -730,11 +735,16 @@ function TalentLoadouts:OnLoadoutSuccess()
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         C_Timer.After(0.25, function()
             TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+
         end)
     end
 
     C_Timer.After(0.25, function()
         TalentLoadouts:UpdateCurrentExportString()
+    end)
+
+    C_Timer.After(0.35, function()
+        TalentLoadouts:CacheActionBars()
     end)
 end
 
@@ -779,6 +789,11 @@ function TalentLoadouts:OnLoadoutFail()
 
     TalentLoadouts:UpdateDropdownText()
     TalentLoadouts:UpdateDataObj()
+end
+
+function TalentLoadouts:CacheActionBars()
+    local cachedActionbars = self.charDB.cachedActionbars
+    cachedActionbars[self.specID] = TalentLoadouts:GetCurrentActionBarsCompressed() or cachedActionbars[self.specID]
 end
 
 function TalentLoadouts:UpdateCurrentExportString()
@@ -2284,6 +2299,17 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Cached Actionbars",
+                notCheckable = 1,
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                menuList = "cachedActionbars"
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Delete All",
                 notCheckable = 1,
                 minWidth = 170,
@@ -2293,6 +2319,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
             },
         level)
+    elseif menu == "cachedActionbars" then
+        local cached = TalentLoadouts.charDB.cachedActionbars
+        for specID, actionBars in pairs(cached) do
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    text = select(2, GetSpecializationInfoByID(specID)),
+                    fontObject = dropdownFont,
+                    func = function()
+                        TalentLoadouts:LoadActionBar(actionBars)
+                        LibDD.CloseDropDownMenus()
+                    end,
+                    notCheckable = 1,
+                },
+            level)
+        end
     elseif menu == "fontSizeOptions" then
         local fontSizes = {10, 11, 12, 13, 14, 15, 16, 18, 20}
         for _, fontSize in ipairs(fontSizes) do
