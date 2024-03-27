@@ -124,7 +124,6 @@ do
                 TalentLoadouts:InitializeDropdown()
                 TalentLoadouts:InitializeButtons()
                 TalentLoadouts:InitializeHooks()
-
             end
         elseif event == "PLAYER_ENTERING_WORLD" and (arg1 or arg2) then
             TalentLoadouts:InitializeCharacterDB()
@@ -705,7 +704,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
     LibDD:CloseDropDownMenus()
 end
 
-local function LoadLoadoutByConfigID(configID, categoryInfo)
+function TalentLoadouts:LoadLoadoutByConfigID(configID, categoryInfo)
     LoadLoadout(nil, TalentLoadouts.globalDB.configIDs[TalentLoadouts.specID][configID], categoryInfo)
 end
 
@@ -1143,7 +1142,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
             end
 
             if fakeConfigID and self.action == 3 then
-                LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
+                TalentLoadouts:LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
             end
         end
     end,
@@ -1389,7 +1388,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
             end
 
             if fakeConfigID and self.action == 3 then
-                LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
+                TalentLoadouts:LoadLoadoutByConfigID(fakeConfigID, categoryInfo)
             end
         end
         self.apply = nil
@@ -1406,8 +1405,9 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
 }
 
 local function ImportCustomLoadout(self, treeType, categoryInfo, entryInfo)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
-    dialog.data = {treeType, categoryInfo}
+    ImprovedTalentLoadoutsImportDialog:ShowDialog(treeType, categoryInfo)
+    --local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING")
+    --dialog.data = {treeType, categoryInfo}
 end
 
 function TalentLoadouts:ImportLoadout(importString, loadoutName, categoryKey)
