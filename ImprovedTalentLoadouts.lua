@@ -1981,19 +1981,8 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
-                text = "Options",
-                notCheckable = 1,
-                hasArrow = true,
-                fontObject = dropdownFont,
-                minWidth = 170,
-                menuList = "options"
-            }
-        )
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
                 arg1 = 1,
-                text = "Create Loadout",
+                text = string.format("%s %sNew Loadout|r", CreateAtlasMarkup("communities-icon-addchannelplus"), GREEN_FONT_COLOR_CODE),
                 minWidth = 170,
                 fontObject = dropdownFont,
                 hasArrow = true,
@@ -2064,7 +2053,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             {
                 value = 1,
                 arg1 = 1,
-                text = "Create Loadout",
+                text = "New Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
@@ -2078,7 +2067,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             {
                 value = 2,
                 arg1 = 2,
-                text = "Create Class Loadout",
+                text = "New Class Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
@@ -2092,7 +2081,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             {
                 value = 3,
                 arg1 = 3,
-                text = "Create Spec Loadout",
+                text = "New Spec Loadout",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
@@ -2870,6 +2859,7 @@ local function CreateIconSpecButton(width, specIndex, numSpecializations, _, ico
     specButton:SetHighlightTexture(icon)
     specButton:SetSize(39.75, 39.75)
     specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width/2 + 1) + (width * (numSpecializations==3 and 1.25 or 1)), -2)
+    
     return specButton
 end
 
