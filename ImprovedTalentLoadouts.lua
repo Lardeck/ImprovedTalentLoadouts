@@ -2912,9 +2912,10 @@ function TalentLoadouts:InitializeButtons()
     saveButton:RegisterForClicks("LeftButtonDown")
     saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -10, 2)
     saveButton:SetText("Update")
-    --saveButton:Disable()
+    saveButton:Disable()
     saveButton.enabled = false
 
+    saveButton:SetDisabledTooltip("", "ANCHOR_TOP")
     saveButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(saveButton, "ANCHOR_TOP")
         GameTooltip:AddLine("Update the active loadout with the current tree.")
