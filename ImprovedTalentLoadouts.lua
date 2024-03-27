@@ -112,6 +112,7 @@ do
     RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     RegisterEvent("EQUIPMENT_SWAP_FINISHED")
     RegisterEvent("VOID_STORAGE_UPDATE")
+    RegisterEvent("MODIFIER_STATE_CHANGED")
     eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
@@ -173,6 +174,15 @@ do
         elseif event == "EQUIPMENT_SWAP_FINISHED" and not arg1 then
             local name = C_EquipmentSet.GetEquipmentSetInfo(arg2)
             TalentLoadouts:Print("Equipment swap failed:", name)
+        elseif event == "MODIFIER_STATE_CHANGED" and TalentLoadouts.saveButton and TalentLoadouts.saveButton:IsShown() then
+            if IsShiftKeyDown() or IsControlKeyDown() then
+                TalentLoadouts.saveButton:Enable()
+                if GetMouseFocus() == TalentLoadouts.saveButton then
+                    TalentLoadouts.saveButton:SetButtonState("NORMAL")
+                end
+            else
+                TalentLoadouts.saveButton:Disable()
+            end
         end
     end)
 end
