@@ -273,6 +273,7 @@ function TalentLoadouts:CheckForDBUpdates()
         ["loadActionbarsSpec"] = false,
         ["loadAsBlizzard"] = true,
         ["useAddOnLoadoutFallback"] = false,
+        ["findMatchingLoadout"] = true,
     }
 
     for key, defaultValue in ipairs(optionKeys) do
@@ -761,11 +762,25 @@ function TalentLoadouts:OnUnknownLoadoutSuccess()
     end
 
     if not known then
-        TalentLoadouts.charDB.lastLoadout = nil
-        TalentLoadouts.charDB[self.specID] = nil
+        local exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+        local configID = nil
+
+        if ImprovedTalentLoadoutsDB.options.findMatchingLoadout then
+            for _, configInfo in pairs(self.globalDB.configIDs[self.specID]) do
+                if configInfo and configInfo.exportString and configInfo.exportString == exportString then
+                    configID = configInfo.ID
+                    break
+                end
+            end
+        end
+
+        TalentLoadouts.charDB.lastLoadout = configID
+        TalentLoadouts.charDB[self.specID] = configID
         TalentLoadouts.charDB.lastCategory = nil
 
-        C_ClassTalents.UpdateLastSelectedSavedConfigID(self.specID, nil)
+        if not configID then
+            C_ClassTalents.UpdateLastSelectedSavedConfigID(self.specID, nil)
+        end
     end
 
     UnregisterEvent("CONFIG_COMMIT_FAILED")
@@ -774,7 +789,6 @@ function TalentLoadouts:OnUnknownLoadoutSuccess()
     TalentLoadouts:UpdateDataObj()
 
     TalentLoadouts.pendingDeletion = true
-    
 end
 
 function TalentLoadouts:OnLoadoutFail()
@@ -2523,6 +2537,24 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 end,
                 checked = function()
                     return ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                text = "Find Matching Loadout",
+                isNotRadio = true,
+                minWidth = 170,
+                tooltipOnButton = 1,
+                tooltipTitle = "",
+                tooltipText = "Instead of showing 'Unknown' the AddOn searches for a Loadout that has a matching export string to the current one when changing talents manually.",
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.findMatchingLoadout = not ImprovedTalentLoadoutsDB.options.findMatchingLoadout
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.findMatchingLoadout
                 end
             },
         level)
