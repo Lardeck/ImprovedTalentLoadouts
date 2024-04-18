@@ -1973,18 +1973,25 @@ local categoryFunctions = {
     }
 }
 
-local function LoadoutDropdownInitialize(_, level, menu, ...)
+local function LoadoutDropdownInitialize(frame, level, menu, ...)
     TalentLoadouts:UpdateSpecID()
     local currentSpecID = TalentLoadouts.specID
+
+
     if level == 1 then
+
+        -- Gets changed delayed because of text length, need to find a way to get the correct width for the separators, maybe cache the width?
+        --print(_G["L_DropDownList" .. level]:GetWidth())
+        local options = ImprovedTalentLoadoutsDB.options
         TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
         TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
         TalentLoadouts:UpdateLoadoutIterator()
         TalentLoadouts:UpdateCategoryIterator()
-
         
+        local needSeparator = false
         for _, categoryInfo in iterateCategories() do
             if not categoryInfo.isSubCategory then
+                needSeparator = true
                 LibDD:UIDropDownMenu_AddButton(
                         {
                             value = categoryInfo,
@@ -2024,6 +2031,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             end
         end
 
+        if needSeparator then
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                    iconInfo = {tSizeX = 165},
+                    notClickable = 1,
+                    iconOnly = 1,
+                    minWidth = 170,
+                    hasArrow = false,
+                    notCheckable = 1,
+                },
+            level)
+        end
+
+
         LibDD:UIDropDownMenu_AddButton(
             {
                 arg1 = 1,
@@ -2042,6 +2064,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 arg1 = 1,
                 text = "Import Loadout",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 notCheckable = 1,
@@ -2052,8 +2075,21 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Create Category",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = CreateCategory,
@@ -2064,6 +2100,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             {
                 text = "Import Category",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCategory,
@@ -2072,9 +2109,22 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Options",
                 notCheckable = 1,
                 hasArrow = true,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 minWidth = 170,
                 menuList = "options"
@@ -2128,6 +2178,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 arg1 = 3,
                 text = "New Spec Loadout",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = SaveCurrentTree,
@@ -2145,6 +2196,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 arg1 = 1,
                 text = "Import Loadout",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
@@ -2159,6 +2211,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 arg1 = 2,
                 text = "Import Class Loadout",
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 func = ImportCustomLoadout,
@@ -2172,6 +2225,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 value = 3,
                 arg1 = 3,
                 text = "Import Spec Loadout",
+                colorCode = "|cFFFFFFFF",
                 minWidth = 170,
                 fontObject = dropdownFont,
                 notCheckable = 1,
@@ -2219,11 +2273,14 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             end
         end
     elseif menu == "options" then
+        --print(_G["L_DropDownList" .. level]:GetWidth())
+
         LibDD:UIDropDownMenu_AddButton(
             {
                 text = "Display Category Name",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.showCategoryName = not ImprovedTalentLoadoutsDB.options.showCategoryName
@@ -2240,6 +2297,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Show Spec Buttons",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.showSpecButtons = not ImprovedTalentLoadoutsDB.options.showSpecButtons
@@ -2256,6 +2314,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Sort Loadouts by Name",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.sortLoadoutsByName = not ImprovedTalentLoadoutsDB.options.sortLoadoutsByName
@@ -2272,6 +2331,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Sort Categories by Name",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.sortCategoriesByName = not ImprovedTalentLoadoutsDB.options.sortCategoriesByName
@@ -2288,6 +2348,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Sort Subcategories by Name",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName = not ImprovedTalentLoadoutsDB.options.sortSubcategoriesByName
@@ -2314,6 +2375,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Action Bars",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "actionBarOptions"
@@ -2325,6 +2387,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Spec Button Type",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "specButtonType"
@@ -2336,6 +2399,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Font Size",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "fontSizeOptions"
@@ -2347,6 +2411,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Cached Actionbars",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "cachedActionbars"
@@ -2355,9 +2420,22 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 209},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Delete All",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     TalentLoadouts:ShowDeleteAll()
@@ -2370,6 +2448,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             LibDD:UIDropDownMenu_AddButton(
                 {
                     text = select(2, GetSpecializationInfoByID(specID)),
+                    colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
                     func = function()
                         TalentLoadouts:LoadActionBar(actionBars)
@@ -2385,6 +2464,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             LibDD:UIDropDownMenu_AddButton(
                 {
                     text = fontSize,
+                    colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
                     func = function()
                         ImprovedTalentLoadoutsDB.options.fontSize = fontSize
@@ -2403,6 +2483,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Load Action Bars with Loadout",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadActionbars = not ImprovedTalentLoadoutsDB.options.loadActionbars
@@ -2418,6 +2499,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Load Action Bars with Spec",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadActionbarsSpec = not ImprovedTalentLoadoutsDB.options.loadActionbarsSpec
@@ -2436,6 +2518,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 tooltipTitle = "|cffff0000WARNING! Use this option at your own risk!|r",
                 tooltipText = "This will remove an action from a slot if it was empty when you've saved the action bars. It's unclear if this affects the action bars of other specs.",
                 tooltipOnButton = 1,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.clearEmptySlots = not ImprovedTalentLoadoutsDB.options.clearEmptySlots
@@ -2454,6 +2537,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 tooltipText = "Lets the AddOn find saved macros based on their names (instead of name + body).",
                 tooltipOnButton = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.findMacroByName = not ImprovedTalentLoadoutsDB.options.findMacroByName
@@ -2469,6 +2553,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Automatically apply Loadout",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.applyLoadout = not ImprovedTalentLoadoutsDB.options.applyLoadout
@@ -2484,6 +2569,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Add Loadouts to /simc",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.simc = not ImprovedTalentLoadoutsDB.options.simc
@@ -2499,6 +2585,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Load Blizzard Loadouts",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 tooltipOnButton = 1,
                 tooltipTitle = "Load Blizzard Loadouts",
@@ -2520,6 +2607,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 tooltipOnButton = 1,
                 tooltipTitle = "",
                 tooltipText = "|cffff0000It is recommended to enable this option to avoid some actionbar related bugs which cannot be fixed. This uses the [ITL] Temp loadout.|r",
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadAsBlizzard = not ImprovedTalentLoadoutsDB.options.loadAsBlizzard
@@ -2535,6 +2623,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 text = "Fall back to AddOn Loadout",
                 isNotRadio = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback = not ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback
@@ -2553,6 +2642,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 tooltipOnButton = 1,
                 tooltipTitle = "",
                 tooltipText = "Instead of showing 'Unknown' the AddOn searches for a Loadout that has a matching export string to the current one when changing talents manually.",
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.findMatchingLoadout = not ImprovedTalentLoadoutsDB.options.findMatchingLoadout
@@ -2569,6 +2659,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             LibDD:UIDropDownMenu_AddButton(
             {
                 text = buttonTypesText[i],
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.specButtonType = buttonType
@@ -2581,16 +2672,16 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
             ,level)
         end
     elseif menu == "loadout" then
-        local functions = {"addToCategory", "removeFromCategory", "assignGearset", "assignLayout", "updateTree", "updateWithString", "updateActionbars", "removeActionbars", "loadActionbars", "rename", "delete", "export"}
         local configID, categoryInfo = L_UIDROPDOWNMENU_MENU_VALUE
         if type(L_UIDROPDOWNMENU_MENU_VALUE) == "table" then
             configID, categoryInfo = unpack(L_UIDROPDOWNMENU_MENU_VALUE)
         end
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
 
-        for _, func in ipairs(functions) do
+        local arrowFunctions = {"addToCategory", "removeFromCategory", "assignGearset", "assignLayout"}
+        for _, func in ipairs(arrowFunctions) do
             local info = loadoutFunctions[func]
-            if (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
+            if info and (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
                 LibDD:UIDropDownMenu_AddButton(
                 {
                     arg1 = configID,
@@ -2602,6 +2693,163 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                     tooltipText = info.tooltipText,
                     text = info.name,
                     isNotRadio = true,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 150,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local orderFunctions = {"setCustomOrder", "removeCustomOrder"}
+        for _, func in ipairs(orderFunctions) do
+            local info = loadoutFunctions[func]
+            if info and (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = configID,
+                    arg2 = categoryInfo,
+                    value = configID,
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 150,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local updateFunctions = {"updateTree", "updateWithString"}
+        for _, func in ipairs(updateFunctions) do
+            local info = loadoutFunctions[func]
+            if info and (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = configID,
+                    arg2 = categoryInfo,
+                    value = configID,
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 150,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local actionbarFunctions = {"updateActionbars", "removeActionbars", "loadActionbars"}
+        for _, func in ipairs(actionbarFunctions) do
+            local info = loadoutFunctions[func]
+            if info and (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = configID,
+                    arg2 = categoryInfo,
+                    value = configID,
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 150,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local defaultFunctions = {"rename", "delete", "export"}
+        for _, func in ipairs(defaultFunctions) do
+            local info = loadoutFunctions[func]
+            if info and (not info.required or configInfo[info.required]) and (not info.level or level == info.level) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = configID,
+                    arg2 = categoryInfo,
+                    value = configID,
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
                     func = info.func,
                     checked = info.checked,
@@ -2670,25 +2918,118 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 value = L_UIDROPDOWNMENU_MENU_VALUE,
                 text = "Category Options",
                 hasArrow = true,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 notCheckable = 1,
                 menuList = "categoryOptions"
             },
         level)
     elseif menu == "categoryOptions" then
-        local functions = {"addToCategory", "removeFromCategory", "rename", "delete", "deleteWithLoadouts", "export"}
-        for _, func in ipairs(functions) do
+
+        local arrowFunctions = {"addToCategory"}
+        for _, func in ipairs(arrowFunctions) do
             local info = categoryFunctions[func]
-            if (not info.required or L_UIDROPDOWNMENU_MENU_VALUE[info.required]) then
+            if info and (not info.required or L_UIDROPDOWNMENU_MENU_VALUE[info.required]) then
                 LibDD:UIDropDownMenu_AddButton(
                 {
                     value = L_UIDROPDOWNMENU_MENU_VALUE,
                     arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
                     arg2 = info.arg2,
+                    colorCode = "|cFFFFFFFF",
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 170,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local defaultFunctions = {"rename", "delete", "deleteWithLoadouts"}
+        for _, func in ipairs(defaultFunctions) do
+            local info = categoryFunctions[func]
+            if info and (not info.required or L_UIDROPDOWNMENU_MENU_VALUE[info.required]) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    value = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg2 = info.arg2,
+                    colorCode = "|cFFFFFFFF",
+                    notCheckable = info.notCheckable and 1 or nil,
+                    tooltipTitle = info.tooltipTitle,
+                    tooltipOnButton = info.tooltipText and 1 or nil,
+                    tooltipText = info.tooltipText,
+                    text = info.name,
+                    isNotRadio = true,
+                    fontObject = dropdownFont,
+                    func = info.func,
+                    checked = info.checked,
+                    hasArrow = info.hasArrow,
+                    menuList = info.menuList,
+                    minWidth = 170,
+                },
+                level)
+            end
+        end
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        local advancedOptions = {"export"}
+        for _, func in ipairs(advancedOptions) do
+            local info = categoryFunctions[func]
+            if info and (not info.required or L_UIDROPDOWNMENU_MENU_VALUE[info.required]) then
+                LibDD:UIDropDownMenu_AddButton(
+                {
+                    value = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
+                    arg2 = info.arg2,
+                    colorCode = "|cFFFFFFFF",
                     notCheckable = info.notCheckable and 1 or nil,
                     tooltipTitle = info.tooltipTitle,
                     tooltipOnButton = info.tooltipText and 1 or nil,
@@ -2752,6 +3093,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                     {
                         arg1 = L_UIDROPDOWNMENU_MENU_VALUE,
                         text = string.format("|T%d:0|t %s", icon, name),
+                        colorCode = "|cFFFFFFFF",
                         fontObject = dropdownFont,
                         minWidth = 170,
                         checked = function()
@@ -2780,6 +3122,7 @@ local function LoadoutDropdownInitialize(_, level, menu, ...)
                 LibDD:UIDropDownMenu_AddButton(
                     {
                         text = info.layoutName,
+                        colorCode = "|cFFFFFFFF",
                         fontObject = dropdownFont,
                         minWidth = 170,
                         checked = function()
