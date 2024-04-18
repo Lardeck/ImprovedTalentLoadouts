@@ -1805,7 +1805,10 @@ function TalentLoadouts:ShowDeleteAll()
 end
 
 function TalentLoadouts:DeleteAllLoadouts()
-    wipe(self.globalDB.configIDs[self.specID])
+    for configID in pairs(self.globalDB.configIDs[self.specID]) do
+        TalentLoadouts:DeleteLoadout(configID)
+    end
+
     LibDD.CloseDropDownMenus()
 end
 
