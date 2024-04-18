@@ -19,7 +19,7 @@ local iterateLoadouts, iterateCategories
 -- @param t:table The table to create the iterator for.
 -- @param order:function A sort function for the keys.
 -- @return function The iterator usable in a loop.
-local function spairs(t, order)
+local function spairs(t, order, categoryKey)
     local keys = {}
     for k in pairs(t) do
         keys[#keys + 1] = k
@@ -29,7 +29,7 @@ local function spairs(t, order)
         table.sort(
             keys,
             function(a, b)
-                return order(t, a, b)
+                return order(t, a, b, categoryKey)
             end
         )
     else
@@ -55,6 +55,29 @@ local function sortByValue(t, a, b)
     if t[a] and t[b] then
         return t[a] < t[b]
     end
+end
+
+local function sortByOrderAndName(t, a, b, categoryKey)
+    if t[a] and t[b] then
+        if categoryKey then
+            local orderA = t[a].categoryCustomOrder and t[a].categoryCustomOrder[categoryKey] or 1000
+            local orderB = t[b].categoryCustomOrder and t[b].categoryCustomOrder[categoryKey] or 1000
+
+            return (orderA < orderB) or (orderA == orderB and (t[a].name < t[b].name))
+        else
+            local orderA = t[a].customOrder or 1000
+            local orderB = t[b].customOrder or 1000
+
+            return (orderA < orderB) or (orderA == orderB and (t[a].name < t[b].name))
+        end
+    end
+end
+
+local function sortByOrder(t, a, b)
+    local orderA = t[a].categoryCustomOrder[categoryKey] or 1000
+    local orderB = t[b].categoryCustomOrder[categoryKey] or 1000
+
+    return (orderA < orderB) or (orderA == orderB and (a < b))
 end
 
 local function sortByKey(t, a, b)
@@ -325,12 +348,12 @@ function TalentLoadouts:UpdateActionBar()
     end
 end
 
-function TalentLoadouts:UpdateLoadoutIterator()
+function TalentLoadouts:UpdateLoadoutIterator(categoryKey)
     local currentSpecID = self.specID
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
-        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByName)
+        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByOrderAndName, categoryKey)
     else
-        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {})
+        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByOrder, categoryKey)
     end
 end
 
@@ -625,7 +648,7 @@ function TalentLoadouts:LoadAsBlizzardLoadout(newConfigInfo)
     if newConfigInfo.name == ITL_LOADOUT_NAME then
         if not self.charDB.tempLoadout or self.charDB.tempLoadout ~= newConfigInfo.ID then
             self.charDB.tempLoadout = newConfigInfo.ID
-            C_ClassTalents.SetUsesSharedActionBars(newConfigInfo.ID, true)
+            --C_ClassTalents.SetUsesSharedActionBars(newConfigInfo.ID, true)
         end
 
         ResetTree(newConfigInfo.treeIDs[1], newConfigInfo.type)
@@ -1221,9 +1244,87 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
             end
         end
     end
- end
+end
 
- StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
+
+
+StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER_CATEGORY"] = {
+    text = "Order of |cFF33ff96%s|r in |cFF34ebe1%s|r",
+    button1 = "Set",
+    button2 = "Cancel",
+    OnAccept = function(self, data)
+        local customOrder = tonumber(self.editBox:GetText())
+        local configInfo, categoryInfo = unpack(data)
+        TalentLoadouts:SetLoadoutCustomOrder(configInfo, categoryInfo, customOrder)
+    end,
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+     end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER"] = {
+    text = "Order of |cFF33ff96%s|r",
+    button1 = "Set",
+    button2 = "Cancel",
+    OnAccept = function(self, configInfo)
+        local customOrder = tonumber(self.editBox:GetText())
+        TalentLoadouts:SetLoadoutCustomOrder(configInfo, nil, customOrder)
+    end,
+    timeout = 0,
+    EditBoxOnEnterPressed = function(self)
+         if ( self:GetParent().button1:IsEnabled() ) then
+             self:GetParent().button1:Click();
+         end
+     end,
+    hasEditBox = true,
+    whileDead = true,
+    hideOnEscape = true,
+}
+
+function TalentLoadouts:SetLoadoutCustomOrder(configInfo, categoryInfo, customOrder)
+    if configInfo then
+        if categoryInfo then
+            configInfo.categoryCustomOrder = configInfo.categoryCustomOrder or {}
+            configInfo.categoryCustomOrder[categoryInfo.key] = customOrder
+        else
+            configInfo.customOrder = customOrder
+        end
+    end
+end
+
+local function SetCustomOrder(self, configID, categoryInfo)
+    if configID then
+        local currentSpecID = TalentLoadouts.specID
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if categoryInfo then
+            local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER_CATEGORY", configInfo.name, categoryInfo.name)
+            dialog.data = {configInfo, categoryInfo}
+        else
+            local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER", configInfo.name)
+            dialog.data = configInfo
+        end
+    end
+end
+
+local function RemoveCustomOrder(self, configID, categoryInfo)
+    if configID then
+        local currentSpecID = TalentLoadouts.specID
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if categoryInfo and configInfo.categoryCustomOrder then
+            configInfo.categoryCustomOrder[categoryInfo.key] = nil
+        else
+            configInfo.customOrder = nil
+        end
+    end
+end
+
+StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
     text = "Loadout Import String",
     button1 = "Import",
     button2 = "Cancel",
@@ -1872,6 +1973,16 @@ local loadoutFunctions = {
         hasArrow = true,
         menuList = "layout",
     },
+    setCustomOrder = {
+        name = "Set Custom Order",
+        notCheckable = true,
+        func = SetCustomOrder,
+    },
+    removeCustomOrder = {
+        name = "Remove Custom Order",
+        notCheckable = true,
+        func = RemoveCustomOrder
+    },
     updateTree = {
         name = "Update Tree",
         notCheckable = true,
@@ -2010,14 +2121,16 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 
         for configID, configInfo in iterateLoadouts() do
             if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
-                local color = (configInfo.error and "|cFFFF0000") or (configInfo.fake and "|cFF33ff96") or "|cFFFFD100"
+                needSeparator = true
 
+                local color = (configInfo.error and "|cFFFF0000") or "|cFF33ff96"
+                local customOrder = options.showCustomOrder and configInfo.customOrder
                 LibDD:UIDropDownMenu_AddButton(
                     {
                         arg1 = configInfo,
                         value = configID,
                         colorCode = color,
-                        text = string.format("%s%s", prefix or configInfo.name, prefix and configInfo.name or ""),
+                        text = customOrder and string.format("|cFFFFFFFF[%d]|r %s", customOrder, configInfo.name) or  configInfo.name,
                         hasArrow = true,
                         minWidth = 170,
                         fontObject = dropdownFont,
@@ -2361,9 +2474,38 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 
         LibDD:UIDropDownMenu_AddButton(
             {
+                text = "Show Custom Order",
+                isNotRadio = true,
+                minWidth = 170,
+                colorCode = "|cFFFFFFFF",
+                fontObject = dropdownFont,
+                func = function()
+                    ImprovedTalentLoadoutsDB.options.showCustomOrder = not ImprovedTalentLoadoutsDB.options.showCustomOrder
+                end,
+                checked = function()
+                    return ImprovedTalentLoadoutsDB.options.showCustomOrder
+                end
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 209},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
                 text = "Loadouts",
                 notCheckable = 1,
                 minWidth = 170,
+                colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
                 hasArrow = true,
                 menuList = "globalLoadoutOptions"
@@ -2890,15 +3032,18 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 table.insert(categoryLoadouts, cID, true)
             end
 
+            TalentLoadouts:UpdateLoadoutIterator(L_UIDROPDOWNMENU_MENU_VALUE.key)
+
             for configID, configInfo in iterateLoadouts() do
                 if categoryLoadouts[configID] ~= nil and configInfo and not configInfo.default then
+                    local customOrder = ImprovedTalentLoadoutsDB.options.showCustomOrder and configInfo.categoryCustomOrder and configInfo.categoryCustomOrder[L_UIDROPDOWNMENU_MENU_VALUE.key]
                     LibDD:UIDropDownMenu_AddButton(
                         {
                             arg1 = configInfo,
                             arg2 = categoryInfo,
                             value = {configID, categoryInfo},
                             colorCode = "|cFF33ff96",
-                            text = configInfo.name,
+                            text = customOrder and string.format("|cFFFFFFFF[%d]|r %s", customOrder, configInfo.name) or configInfo.name,
                             minWidth = 170,
                             fontObject = dropdownFont,
                             hasArrow = true,
