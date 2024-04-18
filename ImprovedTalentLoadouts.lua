@@ -274,9 +274,10 @@ function TalentLoadouts:CheckForDBUpdates()
         ["loadAsBlizzard"] = true,
         ["useAddOnLoadoutFallback"] = false,
         ["findMatchingLoadout"] = true,
+        ["showCustomOrder"] = true,
     }
 
-    for key, defaultValue in ipairs(optionKeys) do
+    for key, defaultValue in pairs(optionKeys) do
         if options[key] == nil then
             options[key] = defaultValue
         end
