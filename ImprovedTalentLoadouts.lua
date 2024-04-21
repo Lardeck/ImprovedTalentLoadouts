@@ -73,11 +73,18 @@ local function sortByOrderAndName(t, a, b, categoryKey)
     end
 end
 
-local function sortByOrder(t, a, b)
-    local orderA = t[a].categoryCustomOrder[categoryKey] or 1000
-    local orderB = t[b].categoryCustomOrder[categoryKey] or 1000
+local function sortByOrder(t, a, b, categoryKey)
+    if categoryKey then
+        local orderA = t[a].categoryCustomOrder and t[a].categoryCustomOrder[categoryKey] or 1000
+        local orderB = t[b].categoryCustomOrder and t[b].categoryCustomOrder[categoryKey] or 1000
 
-    return (orderA < orderB) or (orderA == orderB and (a < b))
+        return (orderA < orderB) or (orderA == orderB and (a < b))
+    else
+        local orderA = t[a].customOrder or 1000
+        local orderB = t[b].customOrder or 1000
+
+        return (orderA < orderB) or (orderA == orderB and (a < b))
+    end
 end
 
 local function sortByKey(t, a, b)
@@ -353,7 +360,7 @@ function TalentLoadouts:UpdateLoadoutIterator(categoryKey)
     if ImprovedTalentLoadoutsDB.options.sortLoadoutsByName then
         iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByOrderAndName, categoryKey)
     else
-        iterateLoadouts = GenerateClosure(pairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByOrder, categoryKey)
+        iterateLoadouts = GenerateClosure(spairs, TalentLoadouts.globalDB.configIDs[currentSpecID] or {}, sortByOrder, categoryKey)
     end
 end
 
