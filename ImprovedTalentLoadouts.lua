@@ -353,9 +353,25 @@ function TalentLoadouts:UpdateSpecID(isRespec)
     self.specID = PlayerUtil.GetCurrentSpecID()
     self.treeID = self:GetTreeID() or self.treeID
 
+    if self.charDB then
+        self:UpdateTempLoadout()
+    end
+
     if isRespec then
         StaticPopup_Hide("TALENTLOADOUTS_LOADOUT_DELETE_ALL")
         self.charDB.lastLoadout = nil
+    end
+end
+
+function TalentLoadouts:UpdateTempLoadout()
+    local configIDs = C_ClassTalents.GetConfigIDsBySpecID(self.specID)
+
+    self.charDB.tempLoadout = nil
+    for _, configID in ipairs(configIDs) do
+        local configInfo = C_Traits.GetConfigInfo(configID)
+        if configInfo.name == ITL_LOADOUT_NAME then
+            self.charDB.tempLoadout = configID
+        end
     end
 end
 
@@ -507,6 +523,7 @@ function TalentLoadouts:DeleteTempLoadouts()
     local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID)
 
     local counter = 0
+    self.charDB.tempLoadout = nil
     for _, configID in ipairs(configIDs) do
         local configInfo = C_Traits.GetConfigInfo(configID)
         if configInfo.name == ITL_LOADOUT_NAME then
@@ -865,10 +882,15 @@ function TalentLoadouts:UpdateCurrentExportString()
     local configInfo = configID and self.globalDB.configIDs[self.specID][configID]
     if configInfo then
         local exportString, entryInfo
-        if not configInfo.entryInfo then
-            exportString, entryInfo = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID)
+        if self.charDB.tempLoadout and ImprovedTalentLoadoutsDB.options.loadAsBlizzard then
+            exportString = C_Traits.GenerateImportString(self.charDB.tempLoadout)
+            entryInfo = CreateEntryInfoFromString(self.charDB.tempLoadout, exportString)
         else
-            exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+            if not configInfo.entryInfo then
+                exportString, entryInfo = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID)
+            else
+                exportString = CreateExportString(nil, C_ClassTalents.GetActiveConfigID(), self.specID, true)
+            end
         end
 
         configInfo.exportString = exportString
