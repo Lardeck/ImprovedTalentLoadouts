@@ -149,6 +149,7 @@ do
         if event == "ADDON_LOADED" then
             if arg1 == addonName then
                 TalentLoadouts:Initialize()
+                TalentLoadouts:InitializeEasyMenu()
             elseif arg1 == talentUI then
                 self:UnregisterEvent("ADDON_LOADED")
                 TalentLoadouts:UpdateSpecID()
@@ -339,14 +340,18 @@ function TalentLoadouts:CheckForVersionUpdates()
     ImprovedTalentLoadoutsDB.version = internalVersion
 end
 
+function TalentLoadouts:GetTreeID(configInfo)
+    return (configInfo and configInfo.treeIDs[1]) or (ClassTalentFrame and ClassTalentFrame.TalentsTab:GetTalentTreeID()) or (C_ClassTalents.GetActiveConfigID() and C_Traits.GetConfigInfo(C_ClassTalents.GetActiveConfigID()).treeIDs[1])
+end
+
 function TalentLoadouts:UpdateSpecID(isRespec)
-    if not self.loaded then
-        UIParentLoadAddOn("Blizzard_ClassTalentUI")
-        self.loaded = true
-    end
+    --if not self.loaded then
+    --    UIParentLoadAddOn("Blizzard_ClassTalentUI")
+    --    self.loaded = true
+    --end
 
     self.specID = PlayerUtil.GetCurrentSpecID()
-    self.treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    self.treeID = self:GetTreeID() or self.treeID
 
     if isRespec then
         StaticPopup_Hide("TALENTLOADOUTS_LOADOUT_DELETE_ALL")
@@ -391,7 +396,7 @@ end
 -- WIP, Wasn't able to reproduce the issue of empty loadout info
 local function CreateEntryInfoFromString(configID, exportString, treeID, repeating)
     configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
-    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    local treeID = TalentLoadouts:GetTreeID()
     local importStream = ExportUtil.MakeImportDataStream(exportString)
     local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
     local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
@@ -407,7 +412,7 @@ local function CreateEntryInfoFromString(configID, exportString, treeID, repeati
 end
 
 local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
-    local treeID = (configInfo and configInfo.treeIDs[1]) or ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    local treeID = TalentLoadouts:GetTreeID(configInfo)
     local treeHash = treeID and C_Traits.GetTreeHash(treeID);
 
     if treeID and treeID == TalentLoadouts.treeID then
@@ -780,12 +785,13 @@ function TalentLoadouts:OnLoadoutSuccess()
     if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
         C_Timer.After(0.25, function()
             TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
-
         end)
     end
 
     C_Timer.After(0.25, function()
-        TalentLoadouts:UpdateCurrentExportString()
+        if IsAddOnLoaded(talentUI) then
+            TalentLoadouts:UpdateCurrentExportString()
+        end
     end)
 
     C_Timer.After(0.35, function()
@@ -1374,7 +1380,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
         local currentSpecID = TalentLoadouts.specID
         local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
         if configInfo then
-            local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+            local treeID = TalentLoadouts:GetTreeID()
             local entryInfo = CreateEntryInfoFromString(configID, importString, treeID)
         
             if entryInfo then
@@ -1552,7 +1558,7 @@ function TalentLoadouts:ImportLoadout(importString, loadoutName, categoryKey)
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
-    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    local treeID = TalentLoadouts:GetTreeID()
     local entryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
     if entryInfo and #entryInfo > 40 then
@@ -1584,7 +1590,7 @@ function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, categoryKey
     local fakeConfigID = FindFreeConfigID()
     if not fakeConfigID then return end
 
-    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    local treeID = TalentLoadouts:GetTreeID()
     local loadoutEntryInfo = CreateEntryInfoFromString(C_ClassTalents.GetActiveConfigID(), importString, treeID)
 
     if loadoutEntryInfo then
@@ -1627,7 +1633,7 @@ function TalentLoadouts:ImportClassLoadout(importString, loadoutName, categoryKe
     if not fakeConfigID then return end
 
     local configID = C_ClassTalents.GetActiveConfigID()
-    local treeID = ClassTalentFrame.TalentsTab:GetTalentTreeID()
+    local treeID = TalentLoadouts:GetTreeID()
     local loadoutEntryInfo = CreateEntryInfoFromString(configID, importString, treeID)
 
     if loadoutEntryInfo then
@@ -2185,33 +2191,74 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             level)
         end
 
+        if frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) then
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = 1,
+                    text = string.format("%s New Loadout", CreateAtlasMarkup("communities-icon-addchannelplus")),
+                    minWidth = 170,
+                    fontObject = dropdownFont,
+                    hasArrow = true,
+                    disabled = 1,
+                    tooltipWhileDisabled = 1,
+                    tooltipTitle = "",
+                    tooltipText = "Plase open the talent window at least once.",
+                    tooltipOnButton = 1,
+                    notCheckable = 1,
+                    func = SaveCurrentTree,
+                    menuList = "createLoadout"
+                },
+            level)
+    
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = 1,
+                    text = "Import Loadout",
+                    minWidth = 170,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    hasArrow = true,
+                    disabled = 1,
+                    tooltipWhileDisabled = 1,
+                    tooltipTitle = "",
+                    tooltipText = "Plase open the talent window at least once.",
+                    tooltipOnButton = 1,
+                    notCheckable = 1,
+                    func = ImportCustomLoadout,
+                    menuList = "importLoadout"
+                },
+            level)
+        else
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = 1,
+                    text = string.format("%s %sNew Loadout|r", CreateAtlasMarkup("communities-icon-addchannelplus"), GREEN_FONT_COLOR_CODE),
+                    minWidth = 170,
+                    fontObject = dropdownFont,
+                    hasArrow = true,
+                    disabled = frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) and 1 or nil,
+                    notCheckable = 1,
+                    func = SaveCurrentTree,
+                    menuList = "createLoadout"
+                },
+            level)
+    
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = 1,
+                    text = "Import Loadout",
+                    minWidth = 170,
+                    colorCode = "|cFFFFFFFF",
+                    fontObject = dropdownFont,
+                    hasArrow = true,
+                    disabled = frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) and 1 or nil,
+                    notCheckable = 1,
+                    func = ImportCustomLoadout,
+                    menuList = "importLoadout"
+                },
+            level)
+        end
 
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                arg1 = 1,
-                text = string.format("%s %sNew Loadout|r", CreateAtlasMarkup("communities-icon-addchannelplus"), GREEN_FONT_COLOR_CODE),
-                minWidth = 170,
-                fontObject = dropdownFont,
-                hasArrow = true,
-                notCheckable = 1,
-                func = SaveCurrentTree,
-                menuList = "createLoadout"
-            },
-        level)
-
-        LibDD:UIDropDownMenu_AddButton(
-            {
-                arg1 = 1,
-                text = "Import Loadout",
-                minWidth = 170,
-                colorCode = "|cFFFFFFFF",
-                fontObject = dropdownFont,
-                hasArrow = true,
-                notCheckable = 1,
-                func = ImportCustomLoadout,
-                menuList = "importLoadout"
-            },
-        level)
 
         LibDD:UIDropDownMenu_AddButton(
             {
@@ -3113,7 +3160,6 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             },
         level)
     elseif menu == "categoryOptions" then
-
         local arrowFunctions = {"addToCategory"}
         for _, func in ipairs(arrowFunctions) do
             local info = categoryFunctions[func]
@@ -3395,7 +3441,7 @@ function TalentLoadouts:InitializeHooks()
 end
 
 function TalentLoadouts:InitializeDropdown()
-    local dropdown = LibDD:Create_UIDropDownMenu("TestDropdownMenu", ClassTalentFrame.TalentsTab)
+    local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", ClassTalentFrame.TalentsTab)
     self.dropdown = dropdown
     dropdown:SetPoint("LEFT", ClassTalentFrame.TalentsTab.SearchBox, "RIGHT", 0, -1)
     
@@ -3408,6 +3454,29 @@ function TalentLoadouts:InitializeDropdown()
         ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
         LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
     end
+
+    --[[hooksecurefunc(LibDD, "ToggleDropDownMenu", function(self, level, ...)
+        if level then
+            if (level - 1) > 0 then
+                local button
+                for i=1, L_UIDROPDOWNMENU_MAXBUTTONS do
+                    button = _G["L_DropDownList"..(level-1).."Button"..i];
+                    if button:IsMouseOver() then
+                        TalentLoadouts.lastButton = button
+                        return
+                    end
+                end
+            end
+            print(TalentLoadouts.dropdown, _G["L_DropDownList" .. level], level, ...)
+        end
+    end)]]
+end
+
+function TalentLoadouts:InitializeEasyMenu()
+    local easyMenu = LibDD:Create_UIDropDownMenu(addonName .. "EasyMenu", nil)
+    self.easyMenu = easyMenu
+    easyMenu.displayMode = "MENU"
+    LibDD:UIDropDownMenu_Initialize(easyMenu, LoadoutDropdownInitialize, "MENU")
 end
 
 local function CreateTextSpecButton(width, specIndex, _, specName)
