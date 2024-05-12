@@ -10,10 +10,12 @@ local ITL_LOADOUT_NAME = "[ITL] Temp"
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local dataObjText = "ITL: %s, %s"
-local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL: Spec, Loadout"})
+local dataObj = LDB:NewDataObject(addonName, {type = "data source", text = "ITL: Spec, Loadout", OnClick = function(self) TalentLoadouts.easyMenuAnchor = self LibDD:ToggleDropDownMenu(1, nil, TalentLoadouts.easyMenu, self, 0, 0); end})
 
 local dropdownFont = CreateFont("ITL_DropdownFont")
 local iterateLoadouts, iterateCategories
+
+local delayed = {}
 
 --- Create an iterator for a hash table.
 -- @param t:table The table to create the iterator for.
@@ -180,14 +182,20 @@ do
             TalentLoadouts:UpdateMacros()
         elseif event == "ACTIVE_PLAYER_SPECIALIZATION_CHANGED" then
             TalentLoadouts.charDB.lastCategory = nil
-            TalentLoadouts:UpdateKnownFlyouts()
             TalentLoadouts:UpdateSpecID(true)
-            TalentLoadouts:UpdateActionBar()
             TalentLoadouts:UpdateDropdownText()
             TalentLoadouts:UpdateSpecButtons()
             TalentLoadouts:UpdateDataObj()
             TalentLoadouts:UpdateLoadoutIterator()
             TalentLoadouts:UpdateCategoryIterator()
+
+            if not InCombatLockdown() then
+                TalentLoadouts:UpdateKnownFlyouts()
+                TalentLoadouts:UpdateActionBar()
+            else
+                delayed.UpdateActionBar = delayed.UpdateActionBar or GenerateClosure(TalentLoadouts.UpdateActionBar, TalentLoadouts)
+                delayed.UpdateKnownFlyouts = delayed.UpdateKnownFlyouts or GenerateClosure(TalentLoadouts.UpdateKnownFlyouts, TalentLoadouts)
+            end
         elseif event == "CONFIG_COMMIT_FAILED" then
             C_Timer.After(0.1, function()
                 if (TalentLoadouts.pendingLoadout and not UnitCastingInfo("player")) or TalentLoadouts.lastUpdated then
@@ -1770,6 +1778,12 @@ end
 
 function TalentLoadouts:LoadActionBar(actionBars, name)
     if not actionBars then return end
+
+    if InCombatLockdown() then
+        TalentLoadouts:Print("Can't load actionbars in combat. Will try to load them after combat...")
+        delayed.LoadActionBar = delayed.LoadActionBar or GenerateClosure(TalentLoadouts.LoadActionBar, TalentLoadouts, actionBars, name)
+        return
+    end
 
     local decompressed = LibDeflate:DecompressDeflate(actionBars)
     if not decompressed then return end
