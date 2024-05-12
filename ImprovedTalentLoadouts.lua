@@ -2701,6 +2701,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadActionbars = not ImprovedTalentLoadoutsDB.options.loadActionbars
                 end,
@@ -2717,6 +2718,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadActionbarsSpec = not ImprovedTalentLoadoutsDB.options.loadActionbarsSpec
                 end,
@@ -2736,6 +2738,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 tooltipOnButton = 1,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.clearEmptySlots = not ImprovedTalentLoadoutsDB.options.clearEmptySlots
                 end,
@@ -2755,6 +2758,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.findMacroByName = not ImprovedTalentLoadoutsDB.options.findMacroByName
                 end,
@@ -2771,6 +2775,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.applyLoadout = not ImprovedTalentLoadoutsDB.options.applyLoadout
                 end,
@@ -2787,6 +2792,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.simc = not ImprovedTalentLoadoutsDB.options.simc
                 end,
@@ -2806,6 +2812,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 tooltipOnButton = 1,
                 tooltipTitle = "Load Blizzard Loadouts",
                 tooltipText = "Load loadouts which also exists in the Blizzard dropdown with the Blizzard API functions and don't handle it as an AddOn loadout. At large this disables the action bar handling of the AddOn",
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadBlizzard = not ImprovedTalentLoadoutsDB.options.loadBlizzard
                 end,
@@ -2825,6 +2832,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 tooltipText = "|cffff0000It is recommended to enable this option to avoid some actionbar related bugs which cannot be fixed. This uses the [ITL] Temp loadout.|r",
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.loadAsBlizzard = not ImprovedTalentLoadoutsDB.options.loadAsBlizzard
                 end,
@@ -2841,6 +2849,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 minWidth = 170,
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback = not ImprovedTalentLoadoutsDB.options.useAddOnLoadoutFallback
                 end,
@@ -2860,6 +2869,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                 tooltipText = "Instead of showing 'Unknown' the AddOn searches for a Loadout that has a matching export string to the current one when changing talents manually.",
                 colorCode = "|cFFFFFFFF",
                 fontObject = dropdownFont,
+                keepShownOnClick = 1,
                 func = function()
                     ImprovedTalentLoadoutsDB.options.findMatchingLoadout = not ImprovedTalentLoadoutsDB.options.findMatchingLoadout
                 end,
@@ -2950,6 +2960,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     isNotRadio = true,
                     colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
+                    keepShownOnClick = 1,
                     func = info.func,
                     checked = info.checked,
                     hasArrow = info.hasArrow,
@@ -2989,6 +3000,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     isNotRadio = true,
                     colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
+                    keepShownOnClick = 1,
                     func = info.func,
                     checked = info.checked,
                     hasArrow = info.hasArrow,
