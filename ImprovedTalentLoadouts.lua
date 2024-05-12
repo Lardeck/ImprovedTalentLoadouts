@@ -1127,7 +1127,8 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_DELETE"] = {
     text = "Are you sure you want to delete the category%s?",
     button1 = "Delete",
     button2 = "Cancel",
-    OnAccept = function(self, categoryInfo, withLoadouts)
+    OnAccept = function(self, data)
+        local categoryInfo, withLoadouts = unpack(data)
         TalentLoadouts:DeleteCategory(categoryInfo, withLoadouts)
     end,
     timeout = 0,
@@ -1137,8 +1138,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_DELETE"] = {
 
 local function DeleteCategory(self, categoryInfo, withLoadouts)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_DELETE", withLoadouts and " (|cffff0000including loadouts|r)" or "")
-    dialog.data = categoryInfo
-    dialog.data2 = withLoadouts
+    dialog.data = {categoryInfo, withLoadouts}
 end
 
 function TalentLoadouts:DeleteCategory(categoryInfo, withLoadouts)
