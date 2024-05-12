@@ -3627,17 +3627,20 @@ function TalentLoadouts:UpdateKnownFlyouts()
         end
     end
 end
-
 SLASH_IMPROVEDTALENDLOADOUTS1 = '/itl'
-SlashCmdList["IMPROVEDTALENDLOADOUTS"] = function(msg, editbox)
+SlashCmdList["IMPROVEDTALENDLOADOUTS"] = function(msg)
     local action, argument = strsplit(" ", msg, 2)
+    argument = SecureCmdOptionParse(argument) or argument
+
     if action == 'saveActionbar' then
         local currentSpecID = TalentLoadouts.specID
         local configID = TalentLoadouts.charDB[currentSpecID]
         if configID then
             UpdateActionBars(nil, configID)
         end
-    elseif action == 'load' and #argument > 0 then
-        TalentLoadouts:LoadLoadoutByName(argument)
+    elseif action == 'load' then
+        if #argument > 0 then
+            TalentLoadouts:LoadLoadoutByName(argument)
+        end
     end
 end
