@@ -167,6 +167,12 @@ do
             TalentLoadouts:UpdateKnownFlyouts()
         elseif event == "PLAYER_REGEN_ENABLED" then
             RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+
+            for _, func in pairs(delayed) do
+                func()
+            end
+
+            delayed = {}
         elseif event == "PLAYER_REGEN_DISABLED" then
             UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
         elseif event == "TRAIT_CONFIG_UPDATED" then
