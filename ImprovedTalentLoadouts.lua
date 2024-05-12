@@ -1401,7 +1401,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
  end
 
 StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_DELETE"] = {
-    text = "Are you sure you want to delete the loadout?",
+    text = "Are you sure you want to delete the loadout |cFF33ff96%s|r?",
     button1 = "Delete",
     button2 = "Cancel",
     OnAccept = function(self, configID)
@@ -1413,8 +1413,14 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_DELETE"] = {
  }
 
 local function DeleteLoadout(self, configID)
-    local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_DELETE")
-    dialog.data = configID
+    if configID then
+        local currentSpecID = TalentLoadouts.specID
+        local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
+        if configInfo then
+            local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_DELETE", configInfo.name)
+            dialog.data = configID
+        end
+    end
 end
 
 function TalentLoadouts:DeleteLoadout(configID)
