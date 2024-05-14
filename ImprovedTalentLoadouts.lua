@@ -1845,10 +1845,9 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
         local slotInfo = data[actionSlot]
         local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
         if slotInfo then
-
             local pickedUp = false
             ClearCursor()
-            if slotInfo.type == "spell" and slotInfo.id ~= currentID then
+            if slotInfo.type == "spell" and (currentType ~= "spell" or slotInfo.id ~= currentID) then
                 PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
