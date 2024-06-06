@@ -1,6 +1,7 @@
 local addonName, TalentLoadouts = ...
 
-local talentUI = "Blizzard_ClassTalentUI"
+local isAlpha = select(4, GetBuildInfo()) == 110000
+local talentUI =  isAlpha and "Blizzard_PlayerSpells" or "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
@@ -16,6 +17,7 @@ local dropdownFont = CreateFont("ITL_DropdownFont")
 local iterateLoadouts, iterateCategories
 
 local delayed = {}
+local talentFrame
 
 --- Create an iterator for a hash table.
 -- @param t:table The table to create the iterator for.
@@ -151,6 +153,8 @@ do
                 TalentLoadouts:Initialize()
                 TalentLoadouts:InitializeEasyMenu()
             elseif arg1 == talentUI then
+                talentFrame = isAlpha and PlayerSpellsFrame.TalentsFrame or ClassTalentFrame.TalentsTab
+
                 self:UnregisterEvent("ADDON_LOADED")
                 TalentLoadouts:UpdateSpecID()
                 TalentLoadouts:InitializeTalentLoadouts()
@@ -221,7 +225,9 @@ do
         elseif event == "MODIFIER_STATE_CHANGED" and TalentLoadouts.saveButton and TalentLoadouts.saveButton:IsShown() then
             if IsShiftKeyDown() or IsControlKeyDown() then
                 TalentLoadouts.saveButton:Enable()
-                if GetMouseFocus() == TalentLoadouts.saveButton then
+                if GetMouseFocus and GetMouseFocus() == TalentLoadouts.saveButton then
+                    TalentLoadouts.saveButton:SetButtonState("NORMAL")
+                elseif GetMouseFoci and tContains(GetMouseFoci(), TalentLoadouts.saveButton) then
                     TalentLoadouts.saveButton:SetButtonState("NORMAL")
                 end
             else
@@ -341,7 +347,7 @@ function TalentLoadouts:CheckForVersionUpdates()
 end
 
 function TalentLoadouts:GetTreeID(configInfo)
-    return (configInfo and configInfo.treeIDs[1]) or (ClassTalentFrame and ClassTalentFrame.TalentsTab:GetTalentTreeID()) or (C_ClassTalents.GetActiveConfigID() and C_Traits.GetConfigInfo(C_ClassTalents.GetActiveConfigID()).treeIDs[1])
+    return (configInfo and configInfo.treeIDs[1]) or (ClassTalentFrame and talentFrame:GetTalentTreeID()) or (C_ClassTalents.GetActiveConfigID() and C_Traits.GetConfigInfo(C_ClassTalents.GetActiveConfigID()).treeIDs[1])
 end
 
 function TalentLoadouts:UpdateSpecID(isRespec)
@@ -414,9 +420,16 @@ local function CreateEntryInfoFromString(configID, exportString, treeID, repeati
     configID = C_Traits.GetConfigInfo(configID) and configID or C_ClassTalents.GetActiveConfigID()
     local treeID = TalentLoadouts:GetTreeID()
     local importStream = ExportUtil.MakeImportDataStream(exportString)
-    local _ = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutHeader, ClassTalentFrame.TalentsTab, importStream)
-    local loadoutContent = securecallfunction(ClassTalentFrame.TalentsTab.ReadLoadoutContent, ClassTalentFrame.TalentsTab, importStream, treeID)
-    local success, loadoutEntryInfo = pcall(ClassTalentFrame.TalentsTab.ConvertToImportLoadoutEntryInfo, ClassTalentFrame.TalentsTab, configID, treeID, loadoutContent)
+    local loadoutContent, success, loadoutEntryInfo
+    if ClassTalentFrame then
+        local _ = securecallfunction(talentFrame.ReadLoadoutHeader, talentFrame, importStream)
+        loadoutContent = securecallfunction(talentFrame.ReadLoadoutContent, talentFrame, importStream, treeID)
+        success, loadoutEntryInfo = pcall(talentFrame.ConvertToImportLoadoutEntryInfo, talentFrame, configID, treeID, loadoutContent)
+    elseif PlayerSpellsFrame then
+        local _ = securecallfunction(PlayerSpellsFrame.TalentsFrame.ReadLoadoutHeader, PlayerSpellsFrame.TalentsFrame, importStream)
+        loadoutContent = securecallfunction(PlayerSpellsFrame.TalentsFrame.ReadLoadoutContent, PlayerSpellsFrame.TalentsFrame, importStream, treeID)
+        success, loadoutEntryInfo = pcall(PlayerSpellsFrame.TalentsFrame.ConvertToImportLoadoutEntryInfo, PlayerSpellsFrame.TalentsFrame, configID, treeID, loadoutContent)
+    end
     -- TalentLoadouts:Print(success, loadoutEntryInfo and #loadoutEntryInfo)
     if success and #loadoutEntryInfo > 0 then
         return loadoutEntryInfo
@@ -435,8 +448,13 @@ local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
         local serializationVersion = C_Traits.GetLoadoutSerializationVersion()
         local dataStream = ExportUtil.MakeExportDataStream()
 
-        ClassTalentFrame.TalentsTab:WriteLoadoutHeader(dataStream, serializationVersion, specID, treeHash)
-        ClassTalentFrame.TalentsTab:WriteLoadoutContent(dataStream , configID, treeID)
+        if ClassTalentFrame then
+            talentFrame:WriteLoadoutHeader(dataStream, serializationVersion, specID, treeHash)
+            talentFrame:WriteLoadoutContent(dataStream , configID, treeID)
+        elseif PlayerSpellsFrame then
+            PlayerSpellsFrame.TalentsFrame:WriteLoadoutHeader(dataStream, serializationVersion, specID, treeHash)
+            PlayerSpellsFrame.TalentsFrame:WriteLoadoutContent(dataStream , configID, treeID)
+        end
 
         local exportString = dataStream:GetExportString()
 
@@ -539,8 +557,8 @@ function TalentLoadouts:DeleteTempLoadouts()
 
     if ClassTalentFrame and ClassTalentFrame:IsShown() then
         C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
-        securecall(ClassTalentFrame.TalentsTab.RefreshLoadoutOptions, ClassTalentFrame.TalentsTab)
-        securecall(ClassTalentFrame.TalentsTab.LoadoutDropDown.ClearSelection, ClassTalentFrame.TalentsTab.LoadoutDropDown)
+        securecall(talentFrame.RefreshLoadoutOptions, talentFrame)
+        securecall(talentFrame.LoadoutDropDown.ClearSelection, talentFrame.LoadoutDropDown)
     end
 
     self.pendingDeletion = nil
@@ -642,8 +660,8 @@ local function CommitLoadout()
         for i=1, #entryInfo do
             local entry = entryInfo[i]
             local nodeInfo = C_Traits.GetNodeInfo(activeConfigID, entry.nodeID)
-            if nodeInfo.isAvailable and nodeInfo.isVisible then
-                if nodeInfo.type == Enum.TraitNodeType.Selection then
+            if nodeInfo.isAvailable and nodeInfo.isVisible and nodeInfo.meetsEdgeRequirements then
+                if nodeInfo.type == Enum.TraitNodeType.Selection or nodeInfo.type == Enum.TraitNodeType.SubTreeSelection then
                     C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
                 end
 
@@ -668,11 +686,11 @@ local function CommitLoadout()
             end
 
             if pcall(C_Traits.GetConfigInfo, TalentLoadouts.charDB.tempLoadout) then
-                --securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
+                --securecallfunction(talentFrame.UpdateTreeCurrencyInfo, talentFrame)
                 RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, TalentLoadouts.charDB.tempLoadout))
                 RunNextFrame(GenerateClosure(C_ClassTalents.UpdateLastSelectedSavedConfigID, TalentLoadouts.specID, TalentLoadouts.charDB.tempLoadout))
             else
-                --securecallfunction(ClassTalentFrame.TalentsTab.UpdateTreeCurrencyInfo, ClassTalentFrame.TalentsTab)
+                --securecallfunction(talentFrame.UpdateTreeCurrencyInfo, talentFrame)
                 RunNextFrame(GenerateClosure(C_ClassTalents.CommitConfig, activeConfigID))
             end
 
@@ -806,7 +824,7 @@ function TalentLoadouts:OnLoadoutSuccess()
     end
 
     C_Timer.After(0.25, function()
-        if IsAddOnLoaded(talentUI) then
+        if C_AddOns.IsAddOnLoaded(talentUI) then
             TalentLoadouts:UpdateCurrentExportString()
         end
     end)
@@ -874,7 +892,7 @@ end
 
 function TalentLoadouts:CacheActionBars()
     local cachedActionbars = self.charDB.cachedActionbars
-    cachedActionbars[self.specID] = TalentLoadouts:GetCurrentActionBarsCompressed() or cachedActionbars[self.specID]
+    cachedActionbars[self.specID] = TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars[self.specID]) or cachedActionbars[self.specID]
 end
 
 function TalentLoadouts:UpdateCurrentExportString()
@@ -1250,7 +1268,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
  end
 
  function TalentLoadouts:SaveCurrentTree(loadoutName, categoryInfo)
-    local isInspecting = ClassTalentFrame.TalentsTab:IsInspecting()
+    local isInspecting = talentFrame:IsInspecting()
     local exportString
     if isInspecting then
         local unit = ClassTalentFrame:GetInspectUnit()
@@ -1751,7 +1769,7 @@ local function RemoveActionBars(self, configID)
     end
 end
 
-function TalentLoadouts:GetCurrentActionBarsCompressed()
+function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
     local actionBars = {}
 
     for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
@@ -1789,7 +1807,7 @@ function TalentLoadouts:GetCurrentActionBarsCompressed()
         end
     end
 
-    if next(actionBars) then
+    if next(actionBars) and #actionBars > 10 then
         local serialized = LibSerialize:Serialize(actionBars)
         local compressed = LibDeflate:CompressDeflate(serialized)
 
@@ -2218,7 +2236,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
             level)
         end
 
-        if frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) then
+        if frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) then
             LibDD:UIDropDownMenu_AddButton(
                 {
                     arg1 = 1,
@@ -2263,7 +2281,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     minWidth = 170,
                     fontObject = dropdownFont,
                     hasArrow = true,
-                    disabled = frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) and 1 or nil,
+                    disabled = frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) and 1 or nil,
                     notCheckable = 1,
                     func = SaveCurrentTree,
                     menuList = "createLoadout"
@@ -2278,7 +2296,7 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
                     colorCode = "|cFFFFFFFF",
                     fontObject = dropdownFont,
                     hasArrow = true,
-                    disabled = frame == TalentLoadouts.easyMenu and not IsAddOnLoaded(talentUI) and 1 or nil,
+                    disabled = frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) and 1 or nil,
                     notCheckable = 1,
                     func = ImportCustomLoadout,
                     menuList = "importLoadout"
@@ -3438,7 +3456,7 @@ function TalentLoadouts:InitializeHooks()
         end
     end)
 
-    if not IsAddOnLoaded("Simulationcraft") then return end
+    if not C_AddOns.IsAddOnLoaded("Simulationcraft") then return end
     hooksecurefunc(SlashCmdList, "ACECONSOLE_SIMC", function()
         if not ImprovedTalentLoadoutsDB.options.simc then return end
 
@@ -3480,16 +3498,16 @@ function TalentLoadouts:InitializeHooks()
 end
 
 function TalentLoadouts:InitializeDropdown()
-    local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", ClassTalentFrame.TalentsTab)
+    local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", talentFrame)
     self.dropdown = dropdown
-    dropdown:SetPoint("LEFT", ClassTalentFrame.TalentsTab.SearchBox, "RIGHT", 0, -1)
+    dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 0, -1)
     
     LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
     LibDD:UIDropDownMenu_Initialize(dropdown, LoadoutDropdownInitialize)
     LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
     self:UpdateDropdownText()
 
-    if IsAddOnLoaded('ElvUI') then
+    if C_AddOns.IsAddOnLoaded('ElvUI') then
         ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
         LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
     end
@@ -3528,9 +3546,9 @@ local function CreateTextSpecButton(width, specIndex, _, specName)
     else
         specButton:SetText(specName)
     end
-    PixelUtil.SetPoint(specButton,"LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
+    PixelUtil.SetPoint(specButton,"LEFT", talentFrame.ResetButton , "RIGHT", (specIndex-1) * (width + 1), -2)
 
-    if IsAddOnLoaded('ElvUI') then
+    if C_AddOns.IsAddOnLoaded('ElvUI') then
         ElvUI[1]:GetModule('Skins'):HandleButton(specButton)
         specButton:SetSize(width - 2, 25)
     end
@@ -3544,7 +3562,7 @@ local function CreateIconSpecButton(width, specIndex, numSpecializations, _, ico
     specButton:SetNormalTexture(icon)
     specButton:SetHighlightTexture(icon)
     specButton:SetSize(39.75, 39.75)
-    specButton:SetPoint("LEFT", ClassTalentFrame.TalentsTab.ResetButton , "RIGHT", (specIndex-1) * (width/2 + 1) + (width * (numSpecializations==3 and 1.25 or 1)), -2)
+    specButton:SetPoint("LEFT", talentFrame.ResetButton , "RIGHT", (specIndex-1) * (width/2 + 1) + (width * (numSpecializations==3 and 1.25 or 1)), -2)
     
     return specButton
 end
@@ -3623,7 +3641,7 @@ function TalentLoadouts:InitializeButtons()
         end
     end)
 
-    if IsAddOnLoaded('ElvUI') then
+    if C_AddOns.IsAddOnLoaded('ElvUI') then
         ElvUI[1]:GetModule('Skins'):HandleButton(saveButton)
         saveButton:SetHeight(22)
         saveButton:AdjustPointsOffset(4, 1)
@@ -3729,13 +3747,27 @@ end
 function TalentLoadouts:UpdateKnownFlyouts()
     self.flyouts = {}
 
-    for i = 1, GetNumSpellTabs() do
-        local offset, numSpells, _, offSpecID = select(3, GetSpellTabInfo(i));
-        if offSpecID == 0 then
-            for slotId = offset + 1, numSpells + offset do
-                local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
-                if spellType  and spellType == "FLYOUT" then
-                    self.flyouts[id] = slotId
+    if GetNumSpellTabs then
+        for i = 1, GetNumSpellTabs() do
+            local offset, numSpells, _, offSpecID = select(3, GetSpellTabInfo(i));
+            if offSpecID == 0 then
+                for slotId = offset + 1, numSpells + offset do
+                    local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
+                    if spellType  and spellType == "FLYOUT" then
+                        self.flyouts[id] = slotId
+                    end
+                end
+            end
+        end
+    elseif C_SpellBook then
+        for i = 1, C_SpellBook.GetNumSpellBookSkillLines() do
+            local skillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo(i)
+            if skillLineInfo then
+                for i = 1, skillLineInfo.numSpellBookItems do
+                    local itemType, id, spellID = C_SpellBook.GetSpellBookItemType(i + skillLineInfo.itemIndexOffset, Enum.SpellBookSpellBank.Player);
+                    if itemType  and itemType == Enum.SpellBookItemType.Flyout then
+                        self.flyouts[id] = slotId
+                    end
                 end
             end
         end
