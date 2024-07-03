@@ -1,6 +1,6 @@
 local addonName, TalentLoadouts = ...
 
-local isAlpha = select(4, GetBuildInfo()) == 110000
+local isAlpha = select(4, GetBuildInfo()) >= 110000
 local talentUI =  isAlpha and "Blizzard_PlayerSpells" or "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
