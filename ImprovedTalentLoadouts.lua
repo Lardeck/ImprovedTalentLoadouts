@@ -506,7 +506,7 @@ end
 
 function TalentLoadouts:UpdateConfig(configID)
     if not self.loaded then
-        UIParentLoadAddOn("Blizzard_ClassTalentUI")
+        UIParentLoadAddOn(talentUI)
         self.loaded = true
         self:UpdateConfig(configID)
         return
@@ -3837,11 +3837,11 @@ end
 function TalentLoadouts:InitializeButtons()
     local saveButton = CreateFrame("Button", nil, self.dropdown, "UIPanelButtonNoTooltipTemplate, UIButtonTemplate")
     self.saveButton = saveButton
-    saveButton:SetSize(65, 32)
+    saveButton:SetSize(60, 28)
     saveButton:SetNormalAtlas("charactercreate-customize-dropdownbox")
     --saveButton:SetHighlightAtlas("charactercreate-customize-dropdownbox-open")    
     saveButton:RegisterForClicks("LeftButtonDown")
-    saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -10, 2)
+    saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -15, 2)
     saveButton:SetText("Update")
     saveButton:Disable()
     saveButton.enabled = false
