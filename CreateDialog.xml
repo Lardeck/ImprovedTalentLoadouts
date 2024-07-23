@@ -28,11 +28,6 @@
 					<Anchor point="BOTTOMLEFT" relativePoint="BOTTOM" relativeKey="$parent.ContentArea" x="5"/>
 				</Anchors>
 			</Button>
-            <CheckButton name="$parentTracked" hidden="true" inherits="AchievementCheckButtonTemplate" parentKey="tracked">
-				<Anchors>
-					<Anchor point="BOTTOMRIGHT" relativePoint="BOTTOM" relativeKey="$parent.ContentArea" x="-5" y="-10"/>
-				</Anchors>
-			</CheckButton>
             <CheckButton name="ImprovedTalentLoadoutsCreateSpecButton">
                 <Size>
                     <AbsDimension x="25" y="25"/>
