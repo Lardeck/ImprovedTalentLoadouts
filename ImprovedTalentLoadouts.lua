@@ -1,7 +1,7 @@
 local addonName, TalentLoadouts = ...
 
-local isAlpha = select(4, GetBuildInfo()) >= 110000
-local talentUI =  isAlpha and "Blizzard_PlayerSpells" or "Blizzard_ClassTalentUI"
+local isTWW = select(4, GetBuildInfo()) >= 110000
+local talentUI =  isTWW and "Blizzard_PlayerSpells" or "Blizzard_ClassTalentUI"
 local LibDD = LibStub:GetLibrary("LibUIDropDownMenu-4.0")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
@@ -153,7 +153,7 @@ do
                 TalentLoadouts:Initialize()
                 TalentLoadouts:InitializeEasyMenu()
             elseif arg1 == talentUI then
-                talentFrame = isAlpha and PlayerSpellsFrame.TalentsFrame or ClassTalentFrame.TalentsTab
+                talentFrame = isTWW and PlayerSpellsFrame.TalentsFrame or ClassTalentFrame.TalentsTab
 
                 self:UnregisterEvent("ADDON_LOADED")
                 TalentLoadouts:UpdateSpecID()
@@ -1263,6 +1263,8 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
  }
 
  local function SaveCurrentTree(self, treeType, categoryInfo)
+    --ImprovedTalentLoadoutsCreateDialog:ShowDialog()
+
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_SAVE")
     dialog.data = {treeType, categoryInfo}
  end
@@ -3497,36 +3499,261 @@ function TalentLoadouts:InitializeHooks()
   end)
 end
 
-function TalentLoadouts:InitializeDropdown()
-    local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", talentFrame)
-    self.dropdown = dropdown
-    dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 0, -1)
-    
-    LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
-    LibDD:UIDropDownMenu_Initialize(dropdown, LoadoutDropdownInitialize)
-    LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
-    self:UpdateDropdownText()
+--[=[
+function TalentLoadouts.MenuLoadoutDropdownInitialize(ownerRegion, rootDescription, contextData)
+    MenuUtil.TraverseMenu(rootDescription, function(description)
+        if description.text == HUD_CLASS_TALENTS_IMPORT_LOADOUT_ACCEPT_BUTTON then
+            --[[description:SetResponder(function(...)
+                SaveCurrentTree()
+                print(description.text, ...)
+                return MenuResponse.Close
+            end)]]
+        elseif description.text == HUD_CLASS_TALENTS_NEW_LOADOUT_DIALOG_TITLE then
+            description:SetResponder(function(...)
+                SaveCurrentTree()
 
-    if C_AddOns.IsAddOnLoaded('ElvUI') then
-        ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
-        LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
+                print(description.text, ...)
+                return MenuResponse.Close
+            end)
+        end
+    end)
+
+    if true then return end
+
+    local divider = MenuUtil.CreateDivider()
+    rootDescription:Insert(divider, 1)
+
+    local title = MenuUtil.CreateTitle("Improved Talent Loadouts")
+    rootDescription:Insert(title, 1)
+
+    ViragDevTool:AddData(ownerRegion)
+    ViragDevTool:AddData(rootDescription)
+    ViragDevTool:AddData(contextData)
+
+
+    if true then return end
+
+    local options = ImprovedTalentLoadoutsDB.options
+    TalentLoadouts.globalDB.categories[currentSpecID] = TalentLoadouts.globalDB.categories[currentSpecID] or {}
+    TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
+    TalentLoadouts:UpdateLoadoutIterator()
+    TalentLoadouts:UpdateCategoryIterator()
+    
+    local needSeparator = false
+    for _, categoryInfo in iterateCategories() do
+        if not categoryInfo.isSubCategory then
+            needSeparator = true
+            LibDD:UIDropDownMenu_AddButton(
+                    {
+                        value = categoryInfo,
+                        colorCode = "|cFF34ebe1",
+                        text = categoryInfo.name,
+                        hasArrow = true,
+                        minWidth = 170,
+                        fontObject = dropdownFont,
+                        notCheckable = 1,
+                        menuList = "category"
+                    },
+            level)
+        end
     end
 
-    --[[hooksecurefunc(LibDD, "ToggleDropDownMenu", function(self, level, ...)
-        if level then
-            if (level - 1) > 0 then
-                local button
-                for i=1, L_UIDROPDOWNMENU_MAXBUTTONS do
-                    button = _G["L_DropDownList"..(level-1).."Button"..i];
-                    if button:IsMouseOver() then
-                        TalentLoadouts.lastButton = button
-                        return
-                    end
-                end
-            end
-            print(TalentLoadouts.dropdown, _G["L_DropDownList" .. level], level, ...)
+
+    for configID, configInfo in iterateLoadouts() do
+        if not configInfo.default and (not configInfo.categories or not next(configInfo.categories)) then
+            needSeparator = true
+
+            local color = (configInfo.error and "|cFFFF0000") or "|cFF33ff96"
+            local customOrder = options.showCustomOrder and configInfo.customOrder
+            LibDD:UIDropDownMenu_AddButton(
+                {
+                    arg1 = configInfo,
+                    value = configID,
+                    colorCode = color,
+                    text = customOrder and string.format("|cFFFFFFFF[%d]|r %s", customOrder, configInfo.name) or  configInfo.name,
+                    hasArrow = true,
+                    minWidth = 170,
+                    fontObject = dropdownFont,
+                    func = LoadLoadout,
+                    checked = function()
+                        return TalentLoadouts.charDB.lastLoadout and TalentLoadouts.charDB.lastLoadout == configID
+                    end,
+                    menuList = "loadout"
+                },
+            level)
         end
-    end)]]
+    end
+
+    if needSeparator then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+                iconInfo = {tSizeX = 165},
+                notClickable = 1,
+                iconOnly = 1,
+                minWidth = 170,
+                hasArrow = false,
+                notCheckable = 1,
+            },
+        level)
+    end
+
+    if frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) then
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = 1,
+                text = string.format("%s New Loadout", CreateAtlasMarkup("communities-icon-addchannelplus")),
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                disabled = 1,
+                tooltipWhileDisabled = 1,
+                tooltipTitle = "",
+                tooltipText = "Plase open the talent window at least once.",
+                tooltipOnButton = 1,
+                notCheckable = 1,
+                func = SaveCurrentTree,
+                menuList = "createLoadout"
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = 1,
+                text = "Import Loadout",
+                minWidth = 170,
+                colorCode = "|cFFFFFFFF",
+                fontObject = dropdownFont,
+                hasArrow = true,
+                disabled = 1,
+                tooltipWhileDisabled = 1,
+                tooltipTitle = "",
+                tooltipText = "Plase open the talent window at least once.",
+                tooltipOnButton = 1,
+                notCheckable = 1,
+                func = ImportCustomLoadout,
+                menuList = "importLoadout"
+            },
+        level)
+    else
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = 1,
+                text = string.format("%s %sNew Loadout|r", CreateAtlasMarkup("communities-icon-addchannelplus"), GREEN_FONT_COLOR_CODE),
+                minWidth = 170,
+                fontObject = dropdownFont,
+                hasArrow = true,
+                disabled = frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) and 1 or nil,
+                notCheckable = 1,
+                func = SaveCurrentTree,
+                menuList = "createLoadout"
+            },
+        level)
+
+        LibDD:UIDropDownMenu_AddButton(
+            {
+                arg1 = 1,
+                text = "Import Loadout",
+                minWidth = 170,
+                colorCode = "|cFFFFFFFF",
+                fontObject = dropdownFont,
+                hasArrow = true,
+                disabled = frame == TalentLoadouts.easyMenu and not C_AddOns.IsAddOnLoaded(talentUI) and 1 or nil,
+                notCheckable = 1,
+                func = ImportCustomLoadout,
+                menuList = "importLoadout"
+            },
+        level)
+    end
+
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+            iconInfo = {tSizeX = 165},
+            notClickable = 1,
+            iconOnly = 1,
+            minWidth = 170,
+            hasArrow = false,
+            notCheckable = 1,
+        },
+    level)
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            text = "Create Category",
+            minWidth = 170,
+            colorCode = "|cFFFFFFFF",
+            fontObject = dropdownFont,
+            notCheckable = 1,
+            func = CreateCategory,
+        }
+    )
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            text = "Import Category",
+            minWidth = 170,
+            colorCode = "|cFFFFFFFF",
+            fontObject = dropdownFont,
+            notCheckable = 1,
+            func = ImportCategory,
+        }
+    )
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+            iconInfo = {tSizeX = 165},
+            notClickable = 1,
+            iconOnly = 1,
+            minWidth = 170,
+            hasArrow = false,
+            notCheckable = 1,
+        },
+    level)
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            text = "Options",
+            notCheckable = 1,
+            hasArrow = true,
+            colorCode = "|cFFFFFFFF",
+            fontObject = dropdownFont,
+            minWidth = 170,
+            menuList = "options"
+        }
+    )
+
+    LibDD:UIDropDownMenu_AddButton(
+        {
+            text = "Close",
+            minWidth = 170,
+            fontObject = dropdownFont,
+            notCheckable = 1,
+            func = LibDD.CloseDropDownMenus,
+        },
+    level)
+end]=]
+
+function TalentLoadouts:InitializeDropdown()
+    --if not Menu or not Menu.ModifyMenu then
+        local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", talentFrame)
+        self.dropdown = dropdown
+        dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 0, -1)
+        
+        LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
+        LibDD:UIDropDownMenu_Initialize(dropdown, LoadoutDropdownInitialize)
+        LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
+        self:UpdateDropdownText()
+
+        if C_AddOns.IsAddOnLoaded('ElvUI') then
+            ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
+            LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
+        end
+    --else
+    --    Menu.ModifyMenu("MENU_CLASS_TALENT_PROFILE", TalentLoadouts.MenuLoadoutDropdownInitialize)
+    --end
 end
 
 function TalentLoadouts:InitializeEasyMenu()

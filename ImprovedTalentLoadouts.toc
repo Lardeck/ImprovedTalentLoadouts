@@ -16,4 +16,6 @@ Libs\libdatabroker-1-1\LibDataBroker-1.1.lua
 API.lua
 ImprovedTalentLoadouts.lua
 ImprovedTalentLoadoutsImportDialog.lua
-ImportPopup.xml
+ImportDialog.xml
+ImprovedTalentLoadoutsCreateDialog.lua
+CreateDialog.xml
