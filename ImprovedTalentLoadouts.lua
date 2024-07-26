@@ -1868,7 +1868,7 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
             local pickedUp = false
             ClearCursor()
             if slotInfo.type == "spell" and (currentType ~= "spell" or slotInfo.id ~= currentID) then
-                PickupSpell(slotInfo.id)
+                C_Spell.PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "macro" then
                 if slotInfo.macroType and self[slotInfo.macroType] and not self.duplicates[slotInfo.macroName] then
@@ -1889,19 +1889,19 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
             elseif slotInfo.type == "summonmount" then
                 local _, spellID = C_MountJournal.GetMountInfoByID(slotInfo.id)
                 if spellID then
-                    PickupSpell(spellID)
+                    C_Spell.PickupSpell(spellID)
                 else
                     C_MountJournal.Pickup(0)
                 end
                 pickedUp = true
             elseif slotInfo.type == "companion" then
-                PickupSpell(slotInfo.id)
+                C_Spell.PickupSpell(slotInfo.id)
                 pickedUp = true
             elseif slotInfo.type == "flyout" then
-                PickupSpellBookItem(self.flyouts[slotInfo.id], BOOKTYPE_SPELL)
+                C_SpellBook.PickupSpellBookItem(self.flyouts[slotInfo.id], Enum.SpellBookSpellBank.Player)
                 pickedUp = true
             elseif slotInfo.type == "item" then
-                PickupItem(slotInfo.id)
+                C_Item.PickupItem(slotInfo.id)
                 pickedUp = true
             end
 
@@ -3974,25 +3974,23 @@ end
 function TalentLoadouts:UpdateKnownFlyouts()
     self.flyouts = {}
 
-    if GetNumSpellTabs then
+    if C_SpellBook and C_SpellBook.GetSpellBookItemType then
+        for skillLineIndex = 1, C_SpellBook.GetNumSpellBookSkillLines() do
+            local skillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo(skillLineIndex)
+            for i = 1, skillLineInfo.numSpellBookItems do
+                local itemType, id, spellID = C_SpellBook.GetSpellBookItemType(i + skillLineInfo.itemIndexOffset, Enum.SpellBookSpellBank.Player);
+                if itemType  and itemType == Enum.SpellBookItemType.Flyout then
+                    self.flyouts[id] = i + skillLineInfo.itemIndexOffset
+                end
+            end
+        end
+    elseif GetNumSpellTabs then
         for i = 1, GetNumSpellTabs() do
             local offset, numSpells, _, offSpecID = select(3, GetSpellTabInfo(i));
             if offSpecID == 0 then
                 for slotId = offset + 1, numSpells + offset do
                     local spellType, id = GetSpellBookItemInfo(slotId, BOOKTYPE_SPELL)
                     if spellType  and spellType == "FLYOUT" then
-                        self.flyouts[id] = slotId
-                    end
-                end
-            end
-        end
-    elseif C_SpellBook then
-        for i = 1, C_SpellBook.GetNumSpellBookSkillLines() do
-            local skillLineInfo = C_SpellBook.GetSpellBookSkillLineInfo(i)
-            if skillLineInfo then
-                for i = 1, skillLineInfo.numSpellBookItems do
-                    local itemType, id, spellID = C_SpellBook.GetSpellBookItemType(i + skillLineInfo.itemIndexOffset, Enum.SpellBookSpellBank.Player);
-                    if itemType  and itemType == Enum.SpellBookItemType.Flyout then
                         self.flyouts[id] = slotId
                     end
                 end
