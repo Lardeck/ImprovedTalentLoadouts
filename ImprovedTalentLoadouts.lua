@@ -2168,6 +2168,10 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
     TalentLoadouts:UpdateSpecID()
     local currentSpecID = TalentLoadouts.specID
 
+    -- Why do I have to do this?
+    if TalentLoadouts.dropdown then
+        TalentLoadouts.dropdown:SetHeight(25)
+    end
 
     if level == 1 then
 
@@ -3740,18 +3744,27 @@ function TalentLoadouts:InitializeDropdown()
     --if not Menu or not Menu.ModifyMenu then
         local dropdown = LibDD:Create_UIDropDownMenu(addonName .. "DropdownMenu", talentFrame)
         self.dropdown = dropdown
-        dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 0, -1)
-        
-        LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
         LibDD:UIDropDownMenu_Initialize(dropdown, LoadoutDropdownInitialize)
-        LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
-        self:UpdateDropdownText()
-
+        LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
+    
         if C_AddOns.IsAddOnLoaded('ElvUI') then
+            -- Something is wrong here but I will swap to the new menu system soon so who cares
+            dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 30, 1)
+            dropdown:SetHeight(25)
+            dropdown.Button:ClearAllPoints()
+            dropdown.Button:SetPoint("RIGHT", dropdown, "RIGHT", -2, 0)
+            dropdown.Button:SetScale(0.8)
             ElvUI[1]:GetModule('Skins'):HandleDropDownBox(dropdown)
+            ElvUI[1]:GetModule('Skins'):HandleNextPrevButton(dropdown.Button, 'down')
+            
+        else
+            dropdown:SetPoint("LEFT", talentFrame.SearchBox, "RIGHT", 0, 2)
+            LibDD:UIDropDownMenu_SetAnchor(dropdown, 0, 16, "BOTTOM", dropdown.Middle, "CENTER")
             LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
+            --LibDD:UIDropDownMenu_SetWidth(dropdown, 170)
         end
-    --else
+        self:UpdateDropdownText()
+        --else
     --    Menu.ModifyMenu("MENU_CLASS_TALENT_PROFILE", TalentLoadouts.MenuLoadoutDropdownInitialize)
     --end
 end
@@ -3841,7 +3854,7 @@ function TalentLoadouts:InitializeButtons()
     saveButton:SetNormalAtlas("charactercreate-customize-dropdownbox")
     --saveButton:SetHighlightAtlas("charactercreate-customize-dropdownbox-open")    
     saveButton:RegisterForClicks("LeftButtonDown")
-    saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -15, 2)
+    saveButton:SetPoint("LEFT", self.dropdown, "RIGHT", -15, 0)
     saveButton:SetText("Update")
     saveButton:Disable()
     saveButton.enabled = false
@@ -3871,7 +3884,7 @@ function TalentLoadouts:InitializeButtons()
     if C_AddOns.IsAddOnLoaded('ElvUI') then
         ElvUI[1]:GetModule('Skins'):HandleButton(saveButton)
         saveButton:SetHeight(22)
-        saveButton:AdjustPointsOffset(4, 1)
+        saveButton:AdjustPointsOffset(20, 0)
     end
 
     self.specButtons = {}
