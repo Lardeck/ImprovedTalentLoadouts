@@ -559,6 +559,10 @@ function TalentLoadouts:DeleteTempLoadouts()
         C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
         securecall(talentFrame.RefreshLoadoutOptions, talentFrame)
         securecall(talentFrame.LoadoutDropDown.ClearSelection, talentFrame.LoadoutDropDown)
+    elseif PlayerSpellsFrame and talentFrame:IsShown() then
+        C_ClassTalents.UpdateLastSelectedSavedConfigID(specID, nil)
+        securecall(talentFrame.RefreshLoadoutOptions, talentFrame)
+        securecall(talentFrame.LoadoutDropDown.ClearSelection, talentFrame.LoadoutDropDown)
     end
 
     self.pendingDeletion = nil
@@ -1273,7 +1277,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
     local isInspecting = talentFrame:IsInspecting()
     local exportString
     if isInspecting then
-        local unit = ClassTalentFrame:GetInspectUnit()
+        local unit = talentFrame:GetInspectUnit()
         if unit and GetInspectSpecialization(unit) == self.specID then
             exportString = C_Traits.GenerateInspectImportString(unit)
         end
@@ -1647,7 +1651,7 @@ function TalentLoadouts:ImportSpecLoadout(importString, loadoutName, categoryKey
         for i=1, #loadoutEntryInfo do
             local nodeInfo = C_Traits.GetNodeInfo(configID, loadoutEntryInfo[i].nodeID)
             local nodeCost = C_Traits.GetNodeCost(configID, nodeInfo.ID)
-            if C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseSpecIcon then
+            if nodeCost and nodeCost[1] and C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseSpecIcon then
                 tinsert(specEntryInfo, loadoutEntryInfo[i])
             end
         end
@@ -1689,7 +1693,7 @@ function TalentLoadouts:ImportClassLoadout(importString, loadoutName, categoryKe
         for i=1, #loadoutEntryInfo do
             local nodeInfo = C_Traits.GetNodeInfo(configID, loadoutEntryInfo[i].nodeID)
             local nodeCost = C_Traits.GetNodeCost(configID, nodeInfo.ID)
-            if C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseClassIcon then
+            if nodeCost and nodeCost[1] and C_Traits.GetTraitCurrencyInfo(nodeCost[1].ID) == Enum.TraitCurrencyFlag.UseClassIcon then
                 tinsert(classEntryInfo, loadoutEntryInfo[i])
             end
         end
