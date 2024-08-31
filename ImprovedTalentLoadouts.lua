@@ -379,6 +379,9 @@ function TalentLoadouts:UpdateTempLoadout()
             self.charDB.tempLoadout = configID
         end
     end
+
+    self.charDB.activeConfigIDs = self.charDB.activeConfigIDs or {}
+    self.charDB.activeConfigIDs[C_ClassTalents.GetActiveConfigID()] = true
 end
 
 function TalentLoadouts:UpdateActionBar()
@@ -526,7 +529,7 @@ end
 function TalentLoadouts:SaveLoadout(configID, currentSpecID)
     local specLoadouts = self.globalDB.configIDs[currentSpecID]
     local configInfo = C_Traits.GetConfigInfo(configID)
-    if configInfo.type == 1 and configInfo.name ~= ITL_LOADOUT_NAME then
+    if configInfo.type == 1 and configInfo.name ~= ITL_LOADOUT_NAME and (not self.charDB.activeConfigIDs or not self.charDB.activeConfigIDs[configInfo.ID]) then
         configInfo.default = configID == C_ClassTalents.GetActiveConfigID() or nil
         specLoadouts[configID] = configInfo
         self:InitializeTalentLoadout(configID)
