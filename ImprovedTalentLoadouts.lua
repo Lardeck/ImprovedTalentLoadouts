@@ -447,7 +447,7 @@ local function CreateExportString(configInfo, configID, specID, skipEntryInfo)
     local treeID = TalentLoadouts:GetTreeID(configInfo)
     local treeHash = treeID and C_Traits.GetTreeHash(treeID);
 
-    if treeID and treeID == TalentLoadouts.treeID then
+    if treeID and treeID == TalentLoadouts.treeID and C_Traits.GetTreeNodes(treeID) then
         local serializationVersion = C_Traits.GetLoadoutSerializationVersion()
         local dataStream = ExportUtil.MakeExportDataStream()
 
