@@ -1422,6 +1422,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
  local function UpdateWithString(self, configID)
     local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE")
     dialog.data = configID
+    dialog.editBox:SetMaxLetters(0)
  end
 
  function TalentLoadouts:UpdateWithString(configID, importString)
@@ -1743,6 +1744,7 @@ local function ExportLoadout(self, configID)
     local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
     if configInfo then
         local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_EXPORT")
+        dialog.editBox:SetMaxLetters(0)
         dialog.editBox:SetText(configInfo.exportString)
         dialog.editBox:HighlightText()
         dialog.editBox:SetFocus()
