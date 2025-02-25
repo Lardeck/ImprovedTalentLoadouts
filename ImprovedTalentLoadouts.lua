@@ -3836,7 +3836,7 @@ function TalentLoadouts:CreateSpecButtons(specButtonType)
 
         specButton:SetScript("OnClick", function(self)
             if self.specIndex ~= GetSpecialization() then
-                SetSpecialization(specIndex)
+                C_SpecializationInfo.SetSpecialization(specIndex)
             end
         end)
         
