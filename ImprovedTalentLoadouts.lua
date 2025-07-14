@@ -1991,6 +1991,11 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
 		return
 	end
 
+	if type(actionBars) == "table" then
+		self:Print("ActionBars got saved incorrectly. Report this to me in my discord server: https://discord.gg/kXsM4rjjuV")
+		return
+	end
+
 	if InCombatLockdown() then
 		TalentLoadouts:Print("Can't load actionbars in combat. Will try to load them after combat...")
 		delayed.LoadActionBar = delayed.LoadActionBar
