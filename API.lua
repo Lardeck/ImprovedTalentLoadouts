@@ -2,7 +2,7 @@ local addonName, TalentLoadouts = ...
 
 ITLAPI = {}
 function ITLAPI:EnumerateSpecLoadouts()
-   if not TalentLoadouts.initialized then return end
+   if not TalentLoadouts.initialized then return function() end end
    
    local last
    return function()
