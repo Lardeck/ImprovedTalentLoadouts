@@ -1047,7 +1047,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_CREATE"] = {
 	button1 = "Create",
 	button2 = "Cancel",
 	OnAccept = function(self)
-		local categoryName = self.editBox:GetText()
+		local categoryName = self.EditBox:GetText()
 		TalentLoadouts:CreateCategory(categoryName)
 	end,
 	timeout = 0,
@@ -1087,7 +1087,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_IMPORT"] = {
 	button1 = "Import",
 	button2 = "Cancel",
 	OnAccept = function(self)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		TalentLoadouts:ProcessCategoryImport(importString)
 	end,
 	timeout = 0,
@@ -1223,9 +1223,9 @@ local function ExportCategory(self, categoryInfo)
 		local compressed = LibDeflate:CompressDeflate(serialized)
 		local encode = LibDeflate:EncodeForPrint(compressed)
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_EXPORT")
-		dialog.editBox:SetText("!PTL1!" .. encode)
-		dialog.editBox:HighlightText()
-		dialog.editBox:SetFocus()
+		dialog.EditBox:SetText("!PTL1!" .. encode)
+		dialog.EditBox:HighlightText()
+		dialog.EditBox:SetFocus()
 	end
 end
 
@@ -1234,7 +1234,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
 	button1 = "Rename",
 	button2 = "Cancel",
 	OnAccept = function(self, categoryInfo)
-		local newCategoryName = self.editBox:GetText()
+		local newCategoryName = self.EditBox:GetText()
 		TalentLoadouts:RenameCategory(categoryInfo, newCategoryName)
 	end,
 	timeout = 0,
@@ -1250,7 +1250,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
 
 local function RenameCategory(self, categoryInfo)
 	local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_RENAME", categoryInfo.name)
-	dialog.editBox:SetText(categoryInfo.name)
+	dialog.EditBox:SetText(categoryInfo.name)
 	dialog.data = categoryInfo
 end
 
@@ -1349,7 +1349,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 	OnHide = function(self, data)
 		if self.action > 1 then
 			local treeType, categoryInfo = unpack(data)
-			local loadoutName = self.editBox:GetText()
+			local loadoutName = self.EditBox:GetText()
 			local fakeConfigID
 			if treeType == 1 then
 				fakeConfigID = TalentLoadouts:SaveCurrentTree(loadoutName, categoryInfo)
@@ -1440,7 +1440,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER_CATEGORY"] = {
 	button1 = "Set",
 	button2 = "Cancel",
 	OnAccept = function(self, data)
-		local customOrder = tonumber(self.editBox:GetText())
+		local customOrder = tonumber(self.EditBox:GetText())
 		local configInfo, categoryInfo = unpack(data)
 		TalentLoadouts:SetLoadoutCustomOrder(configInfo, categoryInfo, customOrder)
 	end,
@@ -1460,7 +1460,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER"] = {
 	button1 = "Set",
 	button2 = "Cancel",
 	OnAccept = function(self, configInfo)
-		local customOrder = tonumber(self.editBox:GetText())
+		local customOrder = tonumber(self.EditBox:GetText())
 		TalentLoadouts:SetLoadoutCustomOrder(configInfo, nil, customOrder)
 	end,
 	timeout = 0,
@@ -1517,7 +1517,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
 	button1 = "Import",
 	button2 = "Cancel",
 	OnAccept = function(self, configID)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		TalentLoadouts:UpdateWithString(configID, importString)
 	end,
 	timeout = 0,
@@ -1534,7 +1534,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
 local function UpdateWithString(self, configID)
 	local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE")
 	dialog.data = configID
-	dialog.editBox:SetMaxLetters(0)
+	dialog.EditBox:SetMaxLetters(0)
 end
 
 function TalentLoadouts:UpdateWithString(configID, importString)
@@ -1611,7 +1611,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_RENAME"] = {
 	button1 = "Rename",
 	button2 = "Cancel",
 	OnAccept = function(self, configInfo)
-		local newName = self.editBox:GetText()
+		local newName = self.EditBox:GetText()
 		TalentLoadouts:RenameLoadout(configInfo, newName)
 	end,
 	timeout = 0,
@@ -1631,7 +1631,7 @@ local function RenameLoadout(self, configID)
 
 	if configInfo then
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_RENAME")
-		dialog.editBox:SetText(configInfo.name)
+		dialog.EditBox:SetText(configInfo.name)
 		dialog.data = configInfo
 	end
 end
@@ -1650,7 +1650,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
 	button2 = "Cancel",
 	OnAccept = function(self, data)
 		local treeType, categoryInfo = unpack(data)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
 		dialog.data = { treeType, importString, categoryInfo }
 	end,
@@ -1685,7 +1685,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
 	OnHide = function(self, data)
 		if self.action > 1 then
 			local treeType, importString, categoryInfo = unpack(data)
-			local loadoutName = self.editBox:GetText()
+			local loadoutName = self.EditBox:GetText()
 			local fakeConfigID
 			if not treeType or treeType == 1 then
 				fakeConfigID =
@@ -1872,10 +1872,10 @@ local function ExportLoadout(self, configID)
 	local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
 	if configInfo then
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_EXPORT")
-		dialog.editBox:SetMaxLetters(0)
-		dialog.editBox:SetText(configInfo.exportString)
-		dialog.editBox:HighlightText()
-		dialog.editBox:SetFocus()
+		dialog.EditBox:SetMaxLetters(0)
+		dialog.EditBox:SetText(configInfo.exportString)
+		dialog.EditBox:HighlightText()
+		dialog.EditBox:SetFocus()
 	end
 end
 
