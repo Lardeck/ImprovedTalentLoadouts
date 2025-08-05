@@ -149,7 +149,6 @@ do
 	RegisterEvent("UPDATE_MACROS")
 	RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
 	RegisterEvent("EQUIPMENT_SWAP_FINISHED")
-	RegisterEvent("VOID_STORAGE_UPDATE")
 	RegisterEvent("MODIFIER_STATE_CHANGED")
 	eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
 		if event == "ADDON_LOADED" then
@@ -171,8 +170,6 @@ do
 			TalentLoadouts:SaveCurrentLoadouts()
 			TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
 			TalentLoadouts:DeleteTempLoadouts()
-			TalentLoadouts:UpdateKnownFlyouts()
-		elseif event == "VOID_STORAGE_UPDATE" then
 			TalentLoadouts:UpdateKnownFlyouts()
 		elseif event == "PLAYER_REGEN_ENABLED" then
 			RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
