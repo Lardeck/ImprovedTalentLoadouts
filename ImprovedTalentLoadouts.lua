@@ -3619,7 +3619,7 @@ function TalentLoadouts.MenuLoadoutDropdownInitialize(ownerRegion, rootDescripti
     TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
     TalentLoadouts:UpdateLoadoutIterator()
     TalentLoadouts:UpdateCategoryIterator()
-    
+
     local needSeparator = false
     for _, categoryInfo in iterateCategories() do
         if not categoryInfo.isSubCategory then
