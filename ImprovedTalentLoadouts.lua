@@ -149,7 +149,6 @@ do
 	RegisterEvent("UPDATE_MACROS")
 	RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
 	RegisterEvent("EQUIPMENT_SWAP_FINISHED")
-	RegisterEvent("VOID_STORAGE_UPDATE")
 	RegisterEvent("MODIFIER_STATE_CHANGED")
 	eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3)
 		if event == "ADDON_LOADED" then
@@ -171,8 +170,6 @@ do
 			TalentLoadouts:SaveCurrentLoadouts()
 			TalentLoadouts:UpdateDataObj(ITLAPI:GetCurrentLoadout())
 			TalentLoadouts:DeleteTempLoadouts()
-			TalentLoadouts:UpdateKnownFlyouts()
-		elseif event == "VOID_STORAGE_UPDATE" then
 			TalentLoadouts:UpdateKnownFlyouts()
 		elseif event == "PLAYER_REGEN_ENABLED" then
 			RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
@@ -1050,13 +1047,13 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_CREATE"] = {
 	button1 = "Create",
 	button2 = "Cancel",
 	OnAccept = function(self)
-		local categoryName = self.editBox:GetText()
+		local categoryName = self.EditBox:GetText()
 		TalentLoadouts:CreateCategory(categoryName)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1090,13 +1087,13 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_IMPORT"] = {
 	button1 = "Import",
 	button2 = "Cancel",
 	OnAccept = function(self)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		TalentLoadouts:ProcessCategoryImport(importString)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1183,8 +1180,8 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_EXPORT"] = {
 	button1 = "Okay",
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1226,9 +1223,9 @@ local function ExportCategory(self, categoryInfo)
 		local compressed = LibDeflate:CompressDeflate(serialized)
 		local encode = LibDeflate:EncodeForPrint(compressed)
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_EXPORT")
-		dialog.editBox:SetText("!PTL1!" .. encode)
-		dialog.editBox:HighlightText()
-		dialog.editBox:SetFocus()
+		dialog.EditBox:SetText("!PTL1!" .. encode)
+		dialog.EditBox:HighlightText()
+		dialog.EditBox:SetFocus()
 	end
 end
 
@@ -1237,13 +1234,13 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
 	button1 = "Rename",
 	button2 = "Cancel",
 	OnAccept = function(self, categoryInfo)
-		local newCategoryName = self.editBox:GetText()
+		local newCategoryName = self.EditBox:GetText()
 		TalentLoadouts:RenameCategory(categoryInfo, newCategoryName)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1253,7 +1250,7 @@ StaticPopupDialogs["TALENTLOADOUTS_CATEGORY_RENAME"] = {
 
 local function RenameCategory(self, categoryInfo)
 	local dialog = StaticPopup_Show("TALENTLOADOUTS_CATEGORY_RENAME", categoryInfo.name)
-	dialog.editBox:SetText(categoryInfo.name)
+	dialog.EditBox:SetText(categoryInfo.name)
 	dialog.data = categoryInfo
 end
 
@@ -1352,7 +1349,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 	OnHide = function(self, data)
 		if self.action > 1 then
 			local treeType, categoryInfo = unpack(data)
-			local loadoutName = self.editBox:GetText()
+			local loadoutName = self.EditBox:GetText()
 			local fakeConfigID
 			if treeType == 1 then
 				fakeConfigID = TalentLoadouts:SaveCurrentTree(loadoutName, categoryInfo)
@@ -1369,8 +1366,8 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_SAVE"] = {
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1443,14 +1440,14 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER_CATEGORY"] = {
 	button1 = "Set",
 	button2 = "Cancel",
 	OnAccept = function(self, data)
-		local customOrder = tonumber(self.editBox:GetText())
+		local customOrder = tonumber(self.EditBox:GetText())
 		local configInfo, categoryInfo = unpack(data)
 		TalentLoadouts:SetLoadoutCustomOrder(configInfo, categoryInfo, customOrder)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1463,13 +1460,13 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_CUSTOM_ORDER"] = {
 	button1 = "Set",
 	button2 = "Cancel",
 	OnAccept = function(self, configInfo)
-		local customOrder = tonumber(self.editBox:GetText())
+		local customOrder = tonumber(self.EditBox:GetText())
 		TalentLoadouts:SetLoadoutCustomOrder(configInfo, nil, customOrder)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1520,13 +1517,13 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
 	button1 = "Import",
 	button2 = "Cancel",
 	OnAccept = function(self, configID)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		TalentLoadouts:UpdateWithString(configID, importString)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1537,7 +1534,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE"] = {
 local function UpdateWithString(self, configID)
 	local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_STRING_UPDATE")
 	dialog.data = configID
-	dialog.editBox:SetMaxLetters(0)
+	dialog.EditBox:SetMaxLetters(0)
 end
 
 function TalentLoadouts:UpdateWithString(configID, importString)
@@ -1614,13 +1611,13 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_RENAME"] = {
 	button1 = "Rename",
 	button2 = "Cancel",
 	OnAccept = function(self, configInfo)
-		local newName = self.editBox:GetText()
+		local newName = self.EditBox:GetText()
 		TalentLoadouts:RenameLoadout(configInfo, newName)
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1634,7 +1631,7 @@ local function RenameLoadout(self, configID)
 
 	if configInfo then
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_RENAME")
-		dialog.editBox:SetText(configInfo.name)
+		dialog.EditBox:SetText(configInfo.name)
 		dialog.data = configInfo
 	end
 end
@@ -1653,14 +1650,14 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_STRING"] = {
 	button2 = "Cancel",
 	OnAccept = function(self, data)
 		local treeType, categoryInfo = unpack(data)
-		local importString = self.editBox:GetText()
+		local importString = self.EditBox:GetText()
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_IMPORT_NAME")
 		dialog.data = { treeType, importString, categoryInfo }
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1688,7 +1685,7 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
 	OnHide = function(self, data)
 		if self.action > 1 then
 			local treeType, importString, categoryInfo = unpack(data)
-			local loadoutName = self.editBox:GetText()
+			local loadoutName = self.EditBox:GetText()
 			local fakeConfigID
 			if not treeType or treeType == 1 then
 				fakeConfigID =
@@ -1711,8 +1708,8 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_IMPORT_NAME"] = {
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1861,8 +1858,8 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_EXPORT"] = {
 	button1 = "Okay",
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	hasEditBox = true,
@@ -1875,10 +1872,10 @@ local function ExportLoadout(self, configID)
 	local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
 	if configInfo then
 		local dialog = StaticPopup_Show("TALENTLOADOUTS_LOADOUT_EXPORT")
-		dialog.editBox:SetMaxLetters(0)
-		dialog.editBox:SetText(configInfo.exportString)
-		dialog.editBox:HighlightText()
-		dialog.editBox:SetFocus()
+		dialog.EditBox:SetMaxLetters(0)
+		dialog.EditBox:SetText(configInfo.exportString)
+		dialog.EditBox:HighlightText()
+		dialog.EditBox:SetFocus()
 	end
 end
 
@@ -2127,24 +2124,24 @@ StaticPopupDialogs["TALENTLOADOUTS_LOADOUT_DELETE_ALL"] = {
 	button1 = "Delete",
 	button2 = "Cancel",
 	OnShow = function(self)
-		self.button1:Disable()
+		self:GetButton1():Disable()
 	end,
 	OnAccept = function()
 		TalentLoadouts:DeleteAllLoadouts()
 	end,
 	timeout = 0,
 	EditBoxOnEnterPressed = function(self)
-		if self:GetParent().button1:IsEnabled() then
-			self:GetParent().button1:Click()
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
 		end
 	end,
 	EditBoxOnTextChanged = function(self)
 		if self:GetText() == "DELETE" then
-			self:GetParent().button1:Enable()
+			self:GetParent():GetButton1():Enable()
 			return
 		end
 
-		self:GetParent().button1:Disable()
+		self:GetParent():GetButton1():Disable()
 	end,
 	hasEditBox = true,
 	whileDead = true,
@@ -3619,7 +3616,7 @@ function TalentLoadouts.MenuLoadoutDropdownInitialize(ownerRegion, rootDescripti
     TalentLoadouts.globalDB.configIDs[currentSpecID] = TalentLoadouts.globalDB.configIDs[currentSpecID] or {}
     TalentLoadouts:UpdateLoadoutIterator()
     TalentLoadouts:UpdateCategoryIterator()
-    
+
     local needSeparator = false
     for _, categoryInfo in iterateCategories() do
         if not categoryInfo.isSubCategory then
