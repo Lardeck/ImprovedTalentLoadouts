@@ -433,11 +433,15 @@ function TalentLoadouts:UpdateActionBar()
 
 	local currentSpecID = self.specID
 	local configInfo = self.globalDB.configIDs[currentSpecID][self.charDB[currentSpecID]]
-	if configInfo and configInfo.actionBars then
-		-- Players are reporting that it sometimes doesn't work after changing the specialization. As I can't reproduce I will add a small delay for now, maybe that fixes it.
-		C_Timer.After(0.1, function()
-			self:LoadActionBar(configInfo.actionBars, configInfo.name)
-		end)
+	if configInfo then
+		TalentLoadouts:CheckActionBar(configInfo)
+
+		if configInfo.actionBars then
+			-- Players are reporting that it sometimes doesn't work after changing the specialization. As I can't reproduce I will add a small delay for now, maybe that fixes it.
+			C_Timer.After(0.1, function()
+				self:LoadActionBar(configInfo.actionBars, configInfo.name)
+			end)
+		end
 	elseif not configInfo then
 		self:Print(
 			"Couldn't find the last loadout of the spec. Make sure that the dropdown doesn't say \"Unknown\". This means that you've changed the tree without updating a loadout."
@@ -922,10 +926,14 @@ function TalentLoadouts:OnLoadoutSuccess()
 		TalentLoadouts.pendingDeletion = true
 	end
 
-	if ImprovedTalentLoadoutsDB.options.loadActionbars and configInfo.actionBars then
-		C_Timer.After(0.25, function()
-			TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
-		end)
+	if ImprovedTalentLoadoutsDB.options.loadActionbars then
+		TalentLoadouts:CheckActionBar(configInfo)
+
+		if configInfo.actionBars then
+			C_Timer.After(0.25, function()
+				TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+			end)
+		end
 	end
 
 	C_Timer.After(0.25, function()
@@ -1964,10 +1972,16 @@ function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
 	end
 end
 
+function TalentLoadouts:CheckActionBar(configInfo)
+	if configInfo.actionBars and type(configInfo.actionBars) == "table" then
+		configInfo.actionBars = nil
+	end
+end
+
 function TalentLoadouts:UpdateActionBars(configInfo)
 	self:UpdateKnownFlyouts()
 
-	configInfo.actionBars = configInfo.actionBars or {}
+	configInfo.actionBars = configInfo.actionBars or nil
 	local actionBars = self:GetCurrentActionBarsCompressed()
 
 	if actionBars then
@@ -1978,18 +1992,17 @@ end
 local function LoadActionBar(self, configID)
 	local currentSpecID = TalentLoadouts.specID
 	local configInfo = TalentLoadouts.globalDB.configIDs[currentSpecID][configID]
-	if configInfo and configInfo.actionBars then
-		TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+	if configInfo then
+		TalentLoadouts:CheckActionBar(configInfo)
+
+		if configInfo.actionBars then
+			TalentLoadouts:LoadActionBar(configInfo.actionBars, configInfo.name)
+		end
 	end
 end
 
 function TalentLoadouts:LoadActionBar(actionBars, name)
 	if not actionBars then
-		return
-	end
-
-	if type(actionBars) == "table" then
-		self:Print("ActionBars got saved incorrectly. Report this to me in my discord server: https://discord.gg/kXsM4rjjuV")
 		return
 	end
 
