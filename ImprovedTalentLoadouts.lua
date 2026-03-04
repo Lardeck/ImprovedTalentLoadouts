@@ -714,6 +714,7 @@ local function ResetTree(treeID, treeType)
 	local activeConfigID = C_ClassTalents.GetActiveConfigID()
 
 	if C_Traits.ConfigHasStagedChanges(activeConfigID) then
+		UnhookFunction("RollbackConfig")
 		C_Traits.RollbackConfig(activeConfigID)
 	end
 
@@ -761,11 +762,11 @@ local function CommitLoadout()
 					C_Traits.SetSelection(activeConfigID, entry.nodeID, entry.selectionEntryID)
 				end
 
-				if C_Traits.CanPurchaseRank(activeConfigID, entry.nodeID, entry.selectionEntryID) then
-					for rank = 1, entry.ranksPurchased do
-						C_Traits.PurchaseRank(activeConfigID, entry.nodeID)
-					end
+				--if C_Traits.CanPurchaseRank(activeConfigID, entry.nodeID, entry.selectionEntryID) then
+				for rank = 1, entry.ranksPurchased do
+					C_Traits.PurchaseRank(activeConfigID, entry.nodeID)
 				end
+				--end
 			end
 		end
 
@@ -866,7 +867,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
 			elseif tempLoadoutInfo then
 				C_ClassTalents.UpdateLastSelectedSavedConfigID(currentSpecID, TalentLoadouts.charDB.tempLoadout)
 				ResetTree(configInfo.treeIDs[1], configInfo.type)
-				RunNextFrame(CommitLoadout)
+				C_Timer.After(0.25, CommitLoadout)
 			end
 		elseif not tempLoadoutInfo or not canCreate then
 			if not ImprovedTalentLoadoutsDB.options.useBlizzardFallback then
@@ -887,7 +888,7 @@ local function LoadLoadout(self, configInfo, categoryInfo, forceBlizzardDisable)
 		TalentLoadouts.lastUpdatedCategory = nil
 
 		ResetTree(configInfo.treeIDs[1], configInfo.type)
-		RunNextFrame(CommitLoadout)
+		C_Timer.After(0.1, CommitLoadout)
 
 		TalentLoadouts:UpdateDropdownText()
 		TalentLoadouts:UpdateDataObj()
