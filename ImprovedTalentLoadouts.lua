@@ -7,6 +7,8 @@ local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 local internalVersion = 7
 local NUM_ACTIONBAR_BUTTONS = 15 * 12
+local MAX_ACCOUNT_MACROS = (MAX_ACCOUNT_MACROS or Constants.MacroConsts.MAX_ACCOUNT_MACROS)
+local MAX_CHARACTER_MACROS = (MAX_CHARACTER_MACROS or Constants.MacroConsts.MAX_CHARACTER_MACROS)
 local ITL_LOADOUT_NAME = "[ITL] Temp"
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
@@ -1933,22 +1935,18 @@ function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
 	for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
 		local actionType, id, actionSubType = GetActionInfo(actionSlot)
 		if actionType then
-			local key, macroType, macroName
+			local key, macroType, macroName, macroTexture
 			if actionType == "macro" then
 				local name = GetActionText(actionSlot)
-				--local name, _, body = GetMacroInfo(id)
+				macroTexture = GetActionTexture(actionSlot)
 
 				if name then
-					local macroIndex = not self.duplicates[name]
-						and (self.globalMacros[name] or self.characterMacros[name])
+					local macroIndex = not self.duplicates[name] and (self.globalMacros[name] or self.characterMacros[name])
 					if macroIndex then
 						macroName = name
 						macroType = macroIndex > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
-
-						if body then
-							body = strtrim(body:gsub("\r", ""))
-							key = string.format("%s\031%s", name, body)
-						end
+					elseif self.duplicates[name] then
+						self:Print("Didn't save slot", actionSlot, "because of non unique macro name:", name, ". Icon:", string.format("|T%d:0|t", macroTexture))
 					end
 				end
 			elseif actionType == "spell" then
@@ -1962,6 +1960,7 @@ function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
 				key = key,
 				macroName = macroName,
 				macroType = macroType,
+				macroTexture = macroTexture
 			}
 		end
 	end
@@ -2041,6 +2040,7 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
 		local currentType, currentID, currentSubType = GetActionInfo(actionSlot)
 		if slotInfo then
 			local pickedUp = false
+
 			ClearCursor()
 			if slotInfo.type == "spell" and (currentType ~= "spell" or slotInfo.id ~= currentID) then
 				C_Spell.PickupSpell(slotInfo.id)
@@ -2062,7 +2062,7 @@ function TalentLoadouts:LoadActionBar(actionBars, name)
 							(slotInfo.body or ""):gsub("\n", " ")
 						)
 					end
-				elseif self.duplicates[slotInfo.macroName] then
+				elseif self.duplicates[slotInfo.macroName] or slotInfo.macroName == "" then
 					printWarning = true
 				end
 			elseif slotInfo.type == "summonmount" then
