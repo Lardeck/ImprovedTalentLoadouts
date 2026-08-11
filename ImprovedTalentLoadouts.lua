@@ -361,6 +361,7 @@ function TalentLoadouts:CheckForDBUpdates()
 		["useAddOnLoadoutFallback"] = false,
 		["findMatchingLoadout"] = true,
 		["showCustomOrder"] = true,
+		["fullDropdownClickArea"] = true,
 	}
 
 	for key, defaultValue in pairs(optionKeys) do
@@ -2654,14 +2655,28 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 		--print(_G["L_DropDownList" .. level]:GetWidth())
 
 		LibDD:UIDropDownMenu_AddButton({
+			text = "Full dropdown click area",
+			isNotRadio = true,
+			minWidth = 170,
+			colorCode = "|cFFFFFFFF",
+			fontObject = dropdownFont,
+			func = function()
+				ImprovedTalentLoadoutsDB.options.fullDropdownClickArea = not ImprovedTalentLoadoutsDB.options.fullDropdownClickArea
+				TalentLoadouts:UpdateClickOverlay()
+			end,
+			checked = function()
+				return ImprovedTalentLoadoutsDB.options.fullDropdownClickArea
+			end,
+		}, level)
+
+		LibDD:UIDropDownMenu_AddButton({
 			text = "Display Category Name",
 			isNotRadio = true,
 			minWidth = 170,
 			colorCode = "|cFFFFFFFF",
 			fontObject = dropdownFont,
 			func = function()
-				ImprovedTalentLoadoutsDB.options.showCategoryName =
-					not ImprovedTalentLoadoutsDB.options.showCategoryName
+				ImprovedTalentLoadoutsDB.options.showCategoryName = not ImprovedTalentLoadoutsDB.options.showCategoryName
 				TalentLoadouts:UpdateDropdownText()
 			end,
 			checked = function()
@@ -3854,6 +3869,8 @@ function TalentLoadouts:InitializeDropdown()
 	--else
 	--    Menu.ModifyMenu("MENU_CLASS_TALENT_PROFILE", TalentLoadouts.MenuLoadoutDropdownInitialize)
 	--end
+
+	self:UpdateClickOverlay()
 end
 
 function TalentLoadouts:InitializeEasyMenu()
@@ -3861,6 +3878,30 @@ function TalentLoadouts:InitializeEasyMenu()
 	self.easyMenu = easyMenu
 	easyMenu.displayMode = "MENU"
 	LibDD:UIDropDownMenu_Initialize(easyMenu, LoadoutDropdownInitialize, "MENU")
+end
+
+function TalentLoadouts:UpdateClickOverlay()
+	local dropdown = self.dropdown
+
+	if ImprovedTalentLoadoutsDB.options.fullDropdownClickArea then
+		local clickOverlay = self.clickOverlay or CreateFrame("Button", addonName .. "ClickButton", dropdown)
+		self.clickOverlay = clickOverlay
+		clickOverlay:SetAllPoints()
+		clickOverlay:Raise()
+		
+		clickOverlay:SetScript("OnMouseDown", function(_, button)
+			if button == "LeftButton" then
+				LibDD:ToggleDropDownMenu(1,	nil, dropdown, clickOverlay, 0, 0)
+			end
+		end)
+
+		dropdown.ArrowButton = dropdown.Button
+		dropdown.Button = clickOverlay
+	elseif self.clickOverlay then
+		self.clickOverlay:Hide()
+
+		dropdown.Button = dropdown.ArrowButton
+	end
 end
 
 local function CreateTextSpecButton(width, specIndex, _, specName)
