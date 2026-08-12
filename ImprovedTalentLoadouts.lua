@@ -1009,7 +1009,7 @@ end
 
 function TalentLoadouts:CacheActionBars()
 	local cachedActionbars = self.charDB.cachedActionbars
-	cachedActionbars[self.specID] = TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars[self.specID])
+	cachedActionbars[self.specID] = TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars[self.specID], true)
 		or cachedActionbars[self.specID]
 end
 
@@ -1929,7 +1929,7 @@ local function RemoveActionBars(self, configID)
 	end
 end
 
-function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
+function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars, skipDuplicatePrint)
 	local actionBars = {}
 
 	for actionSlot = 1, NUM_ACTIONBAR_BUTTONS do
@@ -1941,12 +1941,20 @@ function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
 				macroTexture = GetActionTexture(actionSlot)
 
 				if name then
-					local macroIndex = not self.duplicates[name] and (self.globalMacros[name] or self.characterMacros[name])
+					local macroIndex = not self.duplicates[name]
+						and (self.globalMacros[name] or self.characterMacros[name])
 					if macroIndex then
 						macroName = name
 						macroType = macroIndex > MAX_ACCOUNT_MACROS and "characterMacros" or "globalMacros"
-					elseif self.duplicates[name] then
-						self:Print("Didn't save slot", actionSlot, "because of non unique macro name:", name, ". Icon:", string.format("|T%d:0|t", macroTexture))
+					elseif self.duplicates[name] and not skipDuplicatePrint then
+						self:Print(
+							"Didn't save slot",
+							actionSlot,
+							"because of non unique macro name:",
+							name,
+							". Icon:",
+							string.format("|T%d:0|t", macroTexture)
+						)
 					end
 				end
 			elseif actionType == "spell" then
@@ -1960,7 +1968,7 @@ function TalentLoadouts:GetCurrentActionBarsCompressed(cachedActionbars)
 				key = key,
 				macroName = macroName,
 				macroType = macroType,
-				macroTexture = macroTexture
+				macroTexture = macroTexture,
 			}
 		end
 	end
@@ -2661,7 +2669,8 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 			colorCode = "|cFFFFFFFF",
 			fontObject = dropdownFont,
 			func = function()
-				ImprovedTalentLoadoutsDB.options.fullDropdownClickArea = not ImprovedTalentLoadoutsDB.options.fullDropdownClickArea
+				ImprovedTalentLoadoutsDB.options.fullDropdownClickArea =
+					not ImprovedTalentLoadoutsDB.options.fullDropdownClickArea
 				TalentLoadouts:UpdateClickOverlay()
 			end,
 			checked = function()
@@ -2676,7 +2685,8 @@ local function LoadoutDropdownInitialize(frame, level, menu, ...)
 			colorCode = "|cFFFFFFFF",
 			fontObject = dropdownFont,
 			func = function()
-				ImprovedTalentLoadoutsDB.options.showCategoryName = not ImprovedTalentLoadoutsDB.options.showCategoryName
+				ImprovedTalentLoadoutsDB.options.showCategoryName =
+					not ImprovedTalentLoadoutsDB.options.showCategoryName
 				TalentLoadouts:UpdateDropdownText()
 			end,
 			checked = function()
@@ -3888,10 +3898,10 @@ function TalentLoadouts:UpdateClickOverlay()
 		self.clickOverlay = clickOverlay
 		clickOverlay:SetAllPoints()
 		clickOverlay:Raise()
-		
+
 		clickOverlay:SetScript("OnMouseDown", function(_, button)
 			if button == "LeftButton" then
-				LibDD:ToggleDropDownMenu(1,	nil, dropdown, clickOverlay, 0, 0)
+				LibDD:ToggleDropDownMenu(1, nil, dropdown, clickOverlay, 0, 0)
 			end
 		end)
 
