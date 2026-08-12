@@ -588,7 +588,7 @@ end
 
 function TalentLoadouts:UpdateConfig(configID)
 	if not self.loaded then
-		UIParentLoadAddOn(talentUI)
+		LoadAddOnWithErrorHandling(talentUI)
 		self.loaded = true
 		self:UpdateConfig(configID)
 		return
