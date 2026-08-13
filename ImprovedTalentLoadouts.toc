@@ -4,6 +4,7 @@
 ## SavedVariables: TalentLoadoutProfilesDB, ImprovedTalentLoadoutsDB
 ## OptionalDeps: Simulationcraft
 ## X-Curse-Project-ID: 822393
+## Category: User Interface
 
 Libs\TaintLess\TaintLess.xml
 Libs\LibStub\LibStub.lua
